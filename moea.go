@@ -28,26 +28,22 @@ type Individual interface {
 
 type FitnessFunc func(Individual) float64
 
-func Run(config *Config) (Population, error) {
-	result := config.Algorithm.Initialize(config.Population, config.FitnessFunc)
+func Run(config *Config) (Individual, float64, error) {
+	population := config.Algorithm.Initialize(config.Population, config.FitnessFunc)
+	var result Individual
 	var err error
+	bestfit := 0.0
 	for i := 0; i < config.MaxGenerations; i++ {
-		result, err = config.Algorithm.Generation(result)
+		population, err = config.Algorithm.Generation(population)
 		if err != nil {
-			return nil, err
+			return nil, 0.0, err
+		}
+		for j := 0; j < population.Len(); j++ {
+			if population.Fitness(j) > bestfit {
+				result = population.Individual(j)
+				bestfit = population.Fitness(j)
+			}
 		}
 	}
-	return result, nil
-}
-
-func BestFit(population Population) int {
-	var bestfit float64
-	result := -1
-	for i := 0; i < population.Len(); i++ {
-		if i == -1 || population.Fitness(i) > bestfit {
-			bestfit = population.Fitness(i)
-			result = i
-		}
-	}
-	return result
+	return result, bestfit, nil
 }

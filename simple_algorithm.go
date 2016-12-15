@@ -50,7 +50,7 @@ func (a *simpleAlgorithm) crossover(parent1, parent2 Individual) (Individual, In
 		return parent1.Copy(nil, parent1.Len(), parent1.Len()),
 			parent2.Copy(nil, parent2.Len(), parent2.Len())
 	}
-	cross := int(rand.Float64() * float64(parent1.Len()))
+	cross := 1 + int(rand.Float64()*float64(parent1.Len()-2))
 	child1 := parent1.Copy(parent2, cross, parent1.Len())
 	child2 := parent2.Copy(parent1, cross, parent2.Len())
 	return child1, child2

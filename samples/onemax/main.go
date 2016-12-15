@@ -24,12 +24,11 @@ func main() {
 		Algorithm:      moea.NewSimpleAlgorithmWith(1.0, 0.02),
 		Population:     moea.NewRandomBinaryPopulation(100, 20),
 		FitnessFunc:    fitnessFunc,
-		MaxGenerations: 100,
+		MaxGenerations: 50,
 	}
-	result, err := moea.Run(config)
+	result, fitness, err := moea.Run(config)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
-	bestfit := moea.BestFit(result)
-	fmt.Println(result.Fitness(bestfit))
+	fmt.Println(result, fitness)
 }
