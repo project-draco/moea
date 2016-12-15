@@ -1,15 +1,17 @@
 package moea // import "project-draco.io/moea"
 
 type Config struct {
-	Algorithm      Algorithm
-	Population     Population
-	FitnessFunc    FitnessFunc
-	MaxGenerations int
+	Algorithm            Algorithm
+	Population           Population
+	FitnessFunc          FitnessFunc
+	MaxGenerations       int
+	CrossoverProbability float64
+	MutationProbability  float64
 }
 
 type Algorithm interface {
 	Generation(Population) (Population, error)
-	Initialize(Population, FitnessFunc) Population
+	Initialize(*Config) Population
 }
 
 type Population interface {
@@ -29,7 +31,7 @@ type Individual interface {
 type FitnessFunc func(Individual) float64
 
 func Run(config *Config) (Individual, float64, error) {
-	population := config.Algorithm.Initialize(config.Population, config.FitnessFunc)
+	population := config.Algorithm.Initialize(config)
 	var result Individual
 	var err error
 	bestfit := 0.0

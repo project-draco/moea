@@ -21,10 +21,12 @@ func main() {
 		return result
 	}
 	config := &moea.Config{
-		Algorithm:      moea.NewSimpleAlgorithmWith(1.0, 0.02),
-		Population:     moea.NewRandomBinaryPopulation(100, 20),
-		FitnessFunc:    fitnessFunc,
-		MaxGenerations: 50,
+		Algorithm:            moea.NewSimpleAlgorithm(),
+		Population:           moea.NewRandomBinaryPopulation(100, 20),
+		FitnessFunc:          fitnessFunc,
+		MaxGenerations:       50,
+		CrossoverProbability: 1.0,
+		MutationProbability:  0.02,
 	}
 	result, fitness, err := moea.Run(config)
 	if err != nil {

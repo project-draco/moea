@@ -3,20 +3,11 @@ package moea
 import "math/rand"
 
 type simpleAlgorithm struct {
-	fitnessFunc          FitnessFunc
-	crossoverProbability float64
-	mutationProbability  float64
+	config *Config
 }
 
 func NewSimpleAlgorithm() Algorithm {
-	return NewSimpleAlgorithmWith(0.6, 0.0333)
-}
-
-func NewSimpleAlgorithmWith(crossoverProbability, mutationProbability float64) Algorithm {
-	return &simpleAlgorithm{
-		crossoverProbability: crossoverProbability,
-		mutationProbability:  mutationProbability,
-	}
+	return &simpleAlgorithm{}
 }
 
 func (a *simpleAlgorithm) Generation(t Population) (Population, error) {
@@ -27,8 +18,8 @@ func (a *simpleAlgorithm) Generation(t Population) (Population, error) {
 		a.mutate(child2)
 		tt.setIndividual(child1, i)
 		tt.setIndividual(child2, i+1)
-		tt.setFitness(a.fitnessFunc(child1), i)
-		tt.setFitness(a.fitnessFunc(child2), i+1)
+		tt.setFitness(a.config.FitnessFunc(child1), i)
+		tt.setFitness(a.config.FitnessFunc(child2), i+1)
 	}
 	return tt, nil
 }
@@ -46,7 +37,7 @@ func (a *simpleAlgorithm) selection(t Population) Individual {
 }
 
 func (a *simpleAlgorithm) crossover(parent1, parent2 Individual) (Individual, Individual) {
-	if !flip(a.crossoverProbability) {
+	if !flip(a.config.CrossoverProbability) {
 		return parent1.Copy(nil, parent1.Len(), parent1.Len()),
 			parent2.Copy(nil, parent2.Len(), parent2.Len())
 	}
@@ -59,17 +50,17 @@ func (a *simpleAlgorithm) crossover(parent1, parent2 Individual) (Individual, In
 func (a *simpleAlgorithm) mutate(individual Individual) {
 	mutations := make([]bool, individual.Len())
 	for i := 0; i < individual.Len(); i++ {
-		mutations[i] = flip(a.mutationProbability)
+		mutations[i] = flip(a.config.MutationProbability)
 	}
 	individual.Mutate(mutations)
 }
 
-func (a *simpleAlgorithm) Initialize(p Population, fitnessFunc FitnessFunc) Population {
-	a.fitnessFunc = fitnessFunc
-	pp := newPopulation(p.Len())
-	for i := 0; i < p.Len(); i++ {
-		pp.setIndividual(p.Individual(i), i)
-		pp.setFitness(fitnessFunc(pp.Individual(i)), i)
+func (a *simpleAlgorithm) Initialize(config *Config) Population {
+	a.config = config
+	pp := newPopulation(config.Population.Len())
+	for i := 0; i < config.Population.Len(); i++ {
+		pp.setIndividual(config.Population.Individual(i), i)
+		pp.setFitness(a.config.FitnessFunc(pp.Individual(i)), i)
 	}
 	return pp
 }
