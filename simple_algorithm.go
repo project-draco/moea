@@ -3,8 +3,7 @@ package moea
 import "math/rand"
 
 type simpleAlgorithm struct {
-	fitness              Fitness
-	fitnessSum           float64
+	fitnessFunc          FitnessFunc
 	crossoverProbability float64
 	mutationProbability  float64
 }
@@ -22,23 +21,20 @@ func NewSimpleAlgorithmWith(crossoverProbability, mutationProbability float64) A
 
 func (a *simpleAlgorithm) Generation(t Population) (Population, error) {
 	tt := newPopulation(t.Len())
-	newSum := 0.0
 	for i := 0; i < t.Len(); i += 2 {
 		child1, child2 := a.crossover(a.selection(t), a.selection(t))
 		a.mutate(child1)
 		a.mutate(child2)
 		tt.setIndividual(child1, i)
 		tt.setIndividual(child2, i+1)
-		tt.setFitness(a.fitness(child1), i)
-		tt.setFitness(a.fitness(child2), i+1)
-		newSum += tt.Fitness(i) + tt.Fitness(i+1)
+		tt.setFitness(a.fitnessFunc(child1), i)
+		tt.setFitness(a.fitnessFunc(child2), i+1)
 	}
-	a.fitnessSum = newSum
 	return tt, nil
 }
 
 func (a *simpleAlgorithm) selection(t Population) Individual {
-	r := rand.Float64() * a.fitnessSum
+	r := rand.Float64() * t.TotalFitness()
 	sum := 0.0
 	for i := 0; i < t.Len(); i++ {
 		sum += t.Fitness(i)
@@ -68,16 +64,12 @@ func (a *simpleAlgorithm) mutate(individual Individual) {
 	individual.Mutate(mutations)
 }
 
-func (a *simpleAlgorithm) Initialize(p Population, fitness Fitness) Population {
-	a.fitness = fitness
+func (a *simpleAlgorithm) Initialize(p Population, fitnessFunc FitnessFunc) Population {
+	a.fitnessFunc = fitnessFunc
 	pp := newPopulation(p.Len())
-	sum := 0.0
 	for i := 0; i < p.Len(); i++ {
 		pp.setIndividual(p.Individual(i), i)
-		f := fitness(pp.Individual(i))
-		pp.setFitness(f, i)
-		sum += f
+		pp.setFitness(fitnessFunc(pp.Individual(i)), i)
 	}
-	a.fitnessSum = sum
 	return pp
 }

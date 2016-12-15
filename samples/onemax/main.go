@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	fitness := func(individual moea.Individual) float64 {
+	rand.Seed(time.Now().UTC().UnixNano())
+	fitnessFunc := func(individual moea.Individual) float64 {
 		result := 0.0
 		for i := 0; i < individual.Len(); i++ {
 			if individual.Value(i).(bool) {
@@ -21,10 +21,10 @@ func main() {
 		return result
 	}
 	config := &moea.Config{
-		Algorithm:      moea.NewSimpleAlgorithmWith(0.8, 0.02),
+		Algorithm:      moea.NewSimpleAlgorithmWith(1.0, 0.02),
 		Population:     moea.NewRandomBinaryPopulation(100, 20),
+		FitnessFunc:    fitnessFunc,
 		MaxGenerations: 100,
-		Fitness:        fitness,
 	}
 	result, err := moea.Run(config)
 	if err != nil {
