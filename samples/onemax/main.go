@@ -14,7 +14,7 @@ func main() {
 	fitnessFunc := func(individual moea.Individual) float64 {
 		result := 0.0
 		for i := 0; i < individual.Len(); i++ {
-			if individual.Value(i).(bool) {
+			if individual.Value(0).([]bool)[i] {
 				result++
 			}
 		}
@@ -22,7 +22,7 @@ func main() {
 	}
 	config := &moea.Config{
 		Algorithm:            moea.NewSimpleAlgorithm(),
-		Population:           moea.NewRandomBinaryPopulation(100, 20),
+		Population:           moea.NewRandomBinaryPopulation(100, []int{20}),
 		FitnessFunc:          fitnessFunc,
 		MaxGenerations:       50,
 		CrossoverProbability: 1.0,
