@@ -7,7 +7,11 @@ type population struct {
 }
 
 func newPopulation(size int) *population {
-	return &population{arr: make([]Individual, size), fitnesses: make(map[int]float64, 0)}
+	return newPopulationWith(make([]Individual, size), size)
+}
+
+func newPopulationWith(arr []Individual, size int) *population {
+	return &population{arr: arr, fitnesses: make(map[int]float64, 0)}
 }
 
 func (p *population) Len() int { return len(p.arr) }

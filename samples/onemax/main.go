@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"math/rand"
 	"os"
 	"time"
@@ -12,10 +13,15 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	fitnessFunc := func(individual moea.Individual) float64 {
+		arr := individual.Value(0).([]big.Word)
 		result := 0.0
-		for i := 0; i < individual.Len(); i++ {
-			if individual.Value(0).([]bool)[i] {
-				result++
+		n := 0
+		for _, x := range arr {
+			for ; n < individual.Len() && x != 0; x >>= 1 {
+				if x&1 != 0 {
+					result++
+				}
+				n++
 			}
 		}
 		return result
