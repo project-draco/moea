@@ -3,6 +3,8 @@ package moea
 import (
 	"fmt"
 	"math/big"
+	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -62,9 +64,13 @@ func (r *binaryIndividual) Len() int {
 func (r *binaryIndividual) Value(i int) interface{} {
 	start := r.starts[i] / wordBitsize
 	end := (r.starts[i]+r.lengths[i])/wordBitsize + 1
-	r.variables[i].SetBits(r.representation[start:end])
-	r.variables[i].Rsh(&r.variables[i], uint(r.starts[i]%wordBitsize))
-	return r.variables[i].Bits()
+	rr := make([]big.Word, end-start)
+	rr[0] = r.representation[0] >> uint(r.totalLen-r.starts[i]-r.lengths[i])
+	rr[0] &= ^big.Word(0) >> uint(wordBitsize-r.lengths[i])
+	if rr[len(rr)-1] == 0 && len(rr) > 1 {
+		rr = rr[0 : len(rr)-1]
+	}
+	return rr
 }
 
 func (r *binaryIndividual) Copy(individual Individual, start, end int) Individual {
@@ -75,12 +81,16 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) Individua
 		r.totalLen,
 		make([]big.Int, len(r.variables))}
 	pos := 0
+	var bi *binaryIndividual
+	if individual != nil {
+		bi = individual.(*binaryIndividual)
+	}
 	for i := 0; i < len(r.representation); i++ {
-		if start >= pos+wordBitsize || end <= pos {
+		if start >= pos+wordBitsize || end <= pos || individual == nil {
 			result.representation[i] = r.representation[i]
 		} else {
-			if start <= pos && end >= pos+wordBitsize && individual != nil {
-				result.representation[i] = individual.(*binaryIndividual).representation[i]
+			if start <= pos && end >= pos+wordBitsize {
+				result.representation[i] = bi.representation[i]
 			} else {
 				ii := start - pos
 				if ii < 0 {
@@ -90,9 +100,16 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) Individua
 				if jj > wordBitsize {
 					jj = wordBitsize
 				}
-				result.representation[i] = r.representation[i]
-				setbits(result.representation[i],
-					individual.(*binaryIndividual).representation[i], uint(ii), uint(jj-ii))
+				ll := jj - ii
+				if i < len(r.representation)-1 {
+					ii = wordBitsize - ii - ll
+				} else {
+					ii = r.totalLen%wordBitsize - ii - ll
+				}
+				fmt.Printf("%v %v %b %b\n",
+					ii, ll, r.representation[i], bi.representation[i])
+				result.representation[i] = setbits(r.representation[i],
+					bi.representation[i], uint(ii), uint(ll))
 			}
 		}
 		pos += wordBitsize
@@ -101,11 +118,16 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) Individua
 }
 
 func (r *binaryIndividual) Mutate(mutations []bool) {
+	rmd := r.totalLen % wordBitsize
 	for i := 0; i < len(r.representation); i++ {
 		for j := 0; j < wordBitsize; j++ {
 			pos := i*wordBitsize + j
-			if len(mutations) > pos && mutations[pos] {
-				r.representation[i] ^= 1 << uint(j)
+			if pos < len(mutations) && mutations[pos] {
+				posj := wordBitsize - j - 1
+				if i == len(r.representation)-1 {
+					posj = rmd - j - 1
+				}
+				r.representation[i] ^= 1 << uint(posj)
 			}
 		}
 	}
@@ -117,10 +139,59 @@ func (r *binaryIndividual) String() string {
 		mask := big.Word((1 << uint(rmd)) - 1)
 		r.representation[len(r.representation)-1] &= mask
 	}
-	return fmt.Sprintf("%b", r.representation)
+	result := ""
+	for i := 0; i < len(r.representation)-1; i++ {
+		s := fmt.Sprintf("%b", r.representation[i])
+		if len(s) < wordBitsize {
+			s = strings.Repeat("0", wordBitsize-len(s)) + s
+		}
+		result += s
+	}
+	s := fmt.Sprintf("%b", r.representation[len(r.representation)-1])
+	if len(result)+len(s) < r.totalLen {
+		s = strings.Repeat("0", r.totalLen-len(result)-len(s)) + s
+	}
+	result += s
+	return result
 }
 
 func setbits(destination, source big.Word, at, numbits uint) big.Word {
-	mask := big.Word(((^uint(0)) >> (32 - numbits)) << at)
+	mask := big.Word(((^uint(0)) >> (uint(wordBitsize) - numbits)) << at)
 	return (destination &^ mask) | ((source << at) & mask)
+}
+
+func newFromString(s []string) *binaryIndividual {
+	count := len(s) / wordBitsize
+	if len(s)%wordBitsize > 0 {
+		count++
+	}
+	bi := &binaryIndividual{
+		representation: make([]big.Word, count),
+		lengths:        make([]int, len(s)),
+		starts:         make([]int, len(s)),
+		variables:      make([]big.Int, len(s)),
+	}
+	ss := ""
+	for i, each := range s {
+		bi.lengths[i] = len(each)
+		bi.starts[i] = bi.totalLen
+		bi.totalLen += len(each)
+		ss += s[i]
+	}
+	start := 0
+	i := 0
+	for start < len(ss) {
+		end := start + wordBitsize
+		if end > len(ss) {
+			end = len(ss)
+		}
+		n, err := strconv.ParseUint(ss[start:end], 2, wordBitsize)
+		if err != nil {
+			panic(err.Error())
+		}
+		bi.representation[i] = big.Word(n)
+		start += wordBitsize
+		i++
+	}
+	return bi
 }
