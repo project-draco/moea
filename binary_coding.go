@@ -106,8 +106,6 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) Individua
 				} else {
 					ii = r.totalLen%wordBitsize - ii - ll
 				}
-				fmt.Printf("%v %v %b %b\n",
-					ii, ll, r.representation[i], bi.representation[i])
 				result.representation[i] = setbits(r.representation[i],
 					bi.representation[i], uint(ii), uint(ll))
 			}
