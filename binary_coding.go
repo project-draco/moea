@@ -63,11 +63,29 @@ func (r *binaryIndividual) Len() int {
 
 func (r *binaryIndividual) Value(i int) interface{} {
 	start := r.starts[i] / wordBitsize
+	srmd := r.starts[i] % wordBitsize
 	end := (r.starts[i]+r.lengths[i])/wordBitsize + 1
 	rr := make([]big.Word, end-start)
-	rr[0] = r.representation[0] >> uint(r.totalLen-r.starts[i]-r.lengths[i])
-	rr[0] &= ^big.Word(0) >> uint(wordBitsize-r.lengths[i])
-	if rr[len(rr)-1] == 0 && len(rr) > 1 {
+	for j := 0; j < end-start; j++ {
+		rr[j] = r.representation[start+j] << uint(srmd)
+		if srmd > 0 && j < end-start-1 {
+			rr[j] = setbits(rr[j], r.representation[start+j+1]>>uint(wordBitsize-srmd),
+				uint(wordBitsize-srmd), uint(srmd))
+		}
+	}
+	size := wordBitsize
+	if end == len(r.representation) && r.Len()%wordBitsize > 0 {
+		size = r.Len() % wordBitsize
+	}
+	rr[end-start-1] >>= uint(size - r.lengths[i]%wordBitsize)
+	if r.Len() < wordBitsize {
+		rr[end-start-1] &= ^big.Word(0) >> uint(wordBitsize-r.lengths[i])
+	}
+	ll := r.lengths[i] / wordBitsize
+	if r.lengths[i]%wordBitsize > 0 {
+		ll++
+	}
+	if len(rr) > ll {
 		rr = rr[0 : len(rr)-1]
 	}
 	return rr
@@ -159,8 +177,12 @@ func setbits(destination, source big.Word, at, numbits uint) big.Word {
 }
 
 func newFromString(s []string) *binaryIndividual {
-	count := len(s) / wordBitsize
-	if len(s)%wordBitsize > 0 {
+	l := 0
+	for _, each := range s {
+		l += len(each)
+	}
+	count := l / wordBitsize
+	if l%wordBitsize > 0 {
 		count++
 	}
 	bi := &binaryIndividual{
