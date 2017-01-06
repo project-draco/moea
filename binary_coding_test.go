@@ -1,6 +1,7 @@
 package moea
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"strings"
@@ -66,6 +67,10 @@ func TestCopy(t *testing.T) {
 	i2 = newFromString([]string{"1110", "0" + strings.Repeat("1", wordBitsize-2) + "011", "011"})
 	c = i1.Copy(i2, 5, 6)
 	assertEqual(t, "111011"+strings.Repeat("0", wordBitsize-3)+"111011", c.(*binaryIndividual).String())
+	c = i1.Copy(i2, wordBitsize-1, wordBitsize+1)
+	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-6)+"1100111011", c.(*binaryIndividual).String())
+	c = i1.Copy(i2, wordBitsize, wordBitsize+1)
+	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-5)+"100111011", c.(*binaryIndividual).String())
 }
 
 func TestMutate(t *testing.T) {
@@ -76,6 +81,12 @@ func TestMutate(t *testing.T) {
 
 func assertEqual(t *testing.T, expected, value interface{}) {
 	if !reflect.DeepEqual(expected, value) {
-		t.Errorf("expected %v but was %v", expected, value)
+		s1 := fmt.Sprintf("%v", expected)
+		s2 := fmt.Sprintf("%v", value)
+		if len(s1) > 50 || len(s2) > 50 {
+			t.Errorf("expected\n%v\nbut was\n%v", s1, s2)
+		} else {
+			t.Errorf("expected %v but was %v", s1, s2)
+		}
 	}
 }
