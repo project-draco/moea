@@ -69,8 +69,12 @@ func (r *binaryIndividual) Value(i int) interface{} {
 	for j := 0; j < end-start; j++ {
 		rr[j] = r.representation[start+j] << uint(srmd)
 		if srmd > 0 && j < end-start-1 {
-			rr[j] = setbits(rr[j], r.representation[start+j+1]>>uint(wordBitsize-srmd),
-				uint(wordBitsize-srmd), uint(srmd))
+			size := wordBitsize
+			if start+j+2 == len(r.representation) && r.Len()%wordBitsize > 0 {
+				size = r.Len() % wordBitsize
+			}
+			nextWord := r.representation[start+j+1] >> uint(size-srmd)
+			rr[j] = setbits(rr[j], nextWord, 0, uint(srmd))
 		}
 	}
 	size := wordBitsize
@@ -78,8 +82,8 @@ func (r *binaryIndividual) Value(i int) interface{} {
 		size = r.Len() % wordBitsize
 	}
 	rr[end-start-1] >>= uint(size - r.lengths[i]%wordBitsize)
-	if r.Len() < wordBitsize {
-		rr[end-start-1] &= ^big.Word(0) >> uint(wordBitsize-r.lengths[i])
+	if end == len(r.representation) && r.Len()%wordBitsize > 0 {
+		rr[end-start-1] &= ^big.Word(0) >> uint(wordBitsize-r.lengths[i]%wordBitsize)
 	}
 	ll := r.lengths[i] / wordBitsize
 	if r.lengths[i]%wordBitsize > 0 {
