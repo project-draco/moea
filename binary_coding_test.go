@@ -62,7 +62,10 @@ func TestCopy(t *testing.T) {
 	assertEqual(t, "1100", c.(*binaryIndividual).String())
 	c = i1.Copy(nil, 4, 4)
 	assertEqual(t, "1111", c.(*binaryIndividual).String())
-	// TODO: test with a binary string larger than a big.Word
+	i1 = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"})
+	i2 = newFromString([]string{"1110", "0" + strings.Repeat("1", wordBitsize-2) + "011", "011"})
+	c = i1.Copy(i2, 5, 6)
+	assertEqual(t, "111011"+strings.Repeat("0", wordBitsize-3)+"111011", c.(*binaryIndividual).String())
 }
 
 func TestMutate(t *testing.T) {
