@@ -9,11 +9,14 @@ import (
 )
 
 type binaryIndividual struct {
-	representation []big.Word
-	lengths        []int
-	starts         []int
-	totalLen       int
-	variables      []big.Int // TODO: use pointers and lazy initialization
+	representation         []big.Word
+	lengths                []int
+	starts                 []int
+	totalLen               int
+	variables              [][]big.Word
+	variableWordCount      []int
+	variableWordCountTotal int
+	variablesInitialized   bool
 }
 
 const wordBitsize = int(8 * unsafe.Sizeof(big.Word(0)))
@@ -31,17 +34,36 @@ func NewRandomBinaryPopulation(size int, lengths []int) Population {
 	}
 	arr := make([]big.Word, individualSize*size)
 	bi := make([]binaryIndividual, size)
+	variableWordCount, variableWordCountTotal := computeVariableWordCount(lengths)
+	vars := make([]big.Word, variableWordCountTotal*size)
+	varsSlices := make([][]big.Word, len(lengths)*size)
 	result := newPopulation(size)
-	vars := make([]big.Int, len(lengths)*size)
 	for i := 0; i < size; i++ {
 		bi[i].representation = newBinaryEncoding(arr[i*individualSize : (i+1)*individualSize])
 		bi[i].lengths = lengths
 		bi[i].starts = starts
 		bi[i].totalLen = totalLen
-		bi[i].variables = vars[i*len(lengths) : (i+1)*len(lengths)]
+		bi[i].variables = varsSlices[i*len(lengths) : (i+1)*len(lengths)]
+		v := i * variableWordCountTotal
+		for j := 0; j < len(lengths); j++ {
+			bi[i].variables[j] = vars[v : v+variableWordCount[j]]
+			v += variableWordCount[j]
+		}
+		bi[i].variableWordCount = variableWordCount
+		bi[i].variableWordCountTotal = variableWordCountTotal
 		result.setIndividual(&bi[i], i)
 	}
 	return result
+}
+
+func computeVariableWordCount(lengths []int) ([]int, int) {
+	variableWordCountTotal := 0
+	variableWordCount := make([]int, len(lengths))
+	for i, l := range lengths {
+		variableWordCount[i] = l/wordBitsize + 1
+		variableWordCountTotal += variableWordCount[i]
+	}
+	return variableWordCount, variableWordCountTotal
 }
 
 func newBinaryEncoding(representation []big.Word) []big.Word {
@@ -61,38 +83,45 @@ func (r *binaryIndividual) Len() int {
 	return r.totalLen
 }
 
-func (r *binaryIndividual) Value(i int) interface{} {
-	start := r.starts[i] / wordBitsize
-	srmd := r.starts[i] % wordBitsize
-	end := (r.starts[i]+r.lengths[i])/wordBitsize + 1
-	rr := make([]big.Word, end-start)
-	for j := 0; j < end-start; j++ {
-		rr[j] = r.representation[start+j] << uint(srmd)
-		if srmd > 0 && j < end-start-1 {
-			size := wordBitsize
-			if start+j+2 == len(r.representation) && r.Len()%wordBitsize > 0 {
-				size = r.Len() % wordBitsize
+func (r *binaryIndividual) Value(idx int) interface{} {
+	if r.variablesInitialized {
+		return r.variables[idx]
+	}
+	for i := 0; i < len(r.variables); i++ {
+		start := r.starts[i] / wordBitsize
+		srmd := r.starts[i] % wordBitsize
+		end := (r.starts[i]+r.lengths[i])/wordBitsize + 1
+		rr := r.variables[i]
+		for j := 0; j < end-start; j++ {
+			rr[j] = r.representation[start+j] << uint(srmd)
+			if srmd > 0 && j < end-start-1 {
+				size := wordBitsize
+				if start+j+2 == len(r.representation) && r.Len()%wordBitsize > 0 {
+					size = r.Len() % wordBitsize
+				}
+				nextWord := r.representation[start+j+1] >> uint(size-srmd)
+				rr[j] = setbits(rr[j], nextWord, 0, uint(srmd))
 			}
-			nextWord := r.representation[start+j+1] >> uint(size-srmd)
-			rr[j] = setbits(rr[j], nextWord, 0, uint(srmd))
 		}
+		size := wordBitsize
+		if end == len(r.representation) && r.Len()%wordBitsize > 0 {
+			size = r.Len() % wordBitsize
+		}
+		rr[end-start-1] >>= uint(size - r.lengths[i]%wordBitsize)
+		if end == len(r.representation) && r.Len()%wordBitsize > 0 {
+			rr[end-start-1] &= ^big.Word(0) >> uint(wordBitsize-r.lengths[i]%wordBitsize)
+		}
+		ll := r.lengths[i] / wordBitsize
+		if r.lengths[i]%wordBitsize > 0 {
+			ll++
+		}
+		if len(rr) > ll {
+			rr = rr[0 : len(rr)-1]
+		}
+		r.variables[i] = rr
 	}
-	size := wordBitsize
-	if end == len(r.representation) && r.Len()%wordBitsize > 0 {
-		size = r.Len() % wordBitsize
-	}
-	rr[end-start-1] >>= uint(size - r.lengths[i]%wordBitsize)
-	if end == len(r.representation) && r.Len()%wordBitsize > 0 {
-		rr[end-start-1] &= ^big.Word(0) >> uint(wordBitsize-r.lengths[i]%wordBitsize)
-	}
-	ll := r.lengths[i] / wordBitsize
-	if r.lengths[i]%wordBitsize > 0 {
-		ll++
-	}
-	if len(rr) > ll {
-		rr = rr[0 : len(rr)-1]
-	}
-	return rr
+	r.variablesInitialized = true
+	return r.variables[idx]
 }
 
 func (r *binaryIndividual) Copy(individual Individual, start, end int) Individual {
@@ -101,7 +130,16 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) Individua
 		r.lengths,
 		r.starts,
 		r.totalLen,
-		make([]big.Int, len(r.variables))}
+		make([][]big.Word, len(r.variables)),
+		r.variableWordCount,
+		r.variableWordCountTotal,
+		false}
+	vars := make([]big.Word, r.variableWordCountTotal)
+	v := 0
+	for i := 0; i < len(r.variables); i++ {
+		result.variables[i] = vars[v : v+r.variableWordCount[i]]
+		v += r.variableWordCount[i]
+	}
 	pos := 0
 	var bi *binaryIndividual
 	if individual != nil {
@@ -193,7 +231,7 @@ func newFromString(s []string) *binaryIndividual {
 		representation: make([]big.Word, count),
 		lengths:        make([]int, len(s)),
 		starts:         make([]int, len(s)),
-		variables:      make([]big.Int, len(s)),
+		variables:      make([][]big.Word, len(s)),
 	}
 	ss := ""
 	for i, each := range s {
@@ -201,6 +239,13 @@ func newFromString(s []string) *binaryIndividual {
 		bi.starts[i] = bi.totalLen
 		bi.totalLen += len(each)
 		ss += s[i]
+	}
+	bi.variableWordCount, bi.variableWordCountTotal = computeVariableWordCount(bi.lengths)
+	vars := make([]big.Word, bi.variableWordCountTotal)
+	v := 0
+	for i := 0; i < len(bi.variables); i++ {
+		bi.variables[i] = vars[v : v+bi.variableWordCount[i]]
+		v += bi.variableWordCount[i]
 	}
 	start := 0
 	i := 0
