@@ -189,6 +189,7 @@ func (r *binaryIndividual) Mutate(mutations []bool) {
 			}
 		}
 	}
+	r.variablesInitialized = false
 }
 
 func (r *binaryIndividual) String() string {
