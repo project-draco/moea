@@ -59,18 +59,21 @@ func TestNewFromString(t *testing.T) {
 func TestCopy(t *testing.T) {
 	i1 := newFromString([]string{"1111"})
 	i2 := newFromString([]string{"0000"})
-	c := i1.Copy(i2, 2, 4)
-	assertEqual(t, "1100", c.(*binaryIndividual).String())
-	c = i1.Copy(nil, 4, 4)
-	assertEqual(t, "1111", c.(*binaryIndividual).String())
+	i1.Copy(i2, 2, 4)
+	assertEqual(t, "1100", i1.String())
+	i1.Copy(i2, 0, 4)
+	assertEqual(t, "0000", i1.String())
+	i0 := newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"})
 	i1 = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"})
 	i2 = newFromString([]string{"1110", "0" + strings.Repeat("1", wordBitsize-2) + "011", "011"})
-	c = i1.Copy(i2, 5, 6)
-	assertEqual(t, "111011"+strings.Repeat("0", wordBitsize-3)+"111011", c.(*binaryIndividual).String())
-	c = i1.Copy(i2, wordBitsize-1, wordBitsize+1)
-	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-6)+"1100111011", c.(*binaryIndividual).String())
-	c = i1.Copy(i2, wordBitsize, wordBitsize+1)
-	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-5)+"100111011", c.(*binaryIndividual).String())
+	i1.Copy(i2, 5, 6)
+	assertEqual(t, "111011"+strings.Repeat("0", wordBitsize-3)+"111011", i1.String())
+	i1.Copy(i0, 0, i1.Len())
+	i1.Copy(i2, wordBitsize-1, wordBitsize+1)
+	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-6)+"1100111011", i1.String())
+	i1.Copy(i0, 0, i1.Len())
+	i1.Copy(i2, wordBitsize, wordBitsize+1)
+	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-5)+"100111011", i1.String())
 }
 
 func TestMutate(t *testing.T) {
@@ -79,14 +82,34 @@ func TestMutate(t *testing.T) {
 	assertEqual(t, "0010", i.String())
 }
 
+func TestClone(t *testing.T) {
+	p := NewRandomBinaryPopulation(1, []int{1})
+	c := p.Clone()
+	assertEqual(t, p.Individual(0), c.Individual(0))
+	assertEqual(t, p.Individual(0).Value(0), c.Individual(0).Value(0))
+	c.Individual(0).Mutate([]bool{true})
+	assertNotEqual(t, p.Individual(0), c.Individual(0))
+	assertNotEqual(t, p.Individual(0).Value(0), c.Individual(0).Value(0))
+}
+
 func assertEqual(t *testing.T, expected, value interface{}) {
 	if !reflect.DeepEqual(expected, value) {
-		s1 := fmt.Sprintf("%v", expected)
-		s2 := fmt.Sprintf("%v", value)
-		if len(s1) > 50 || len(s2) > 50 {
-			t.Errorf("expected\n%v\nbut was\n%v", s1, s2)
-		} else {
-			t.Errorf("expected %v but was %v", s1, s2)
-		}
+		reportError(t, expected, value)
+	}
+}
+
+func assertNotEqual(t *testing.T, expected, value interface{}) {
+	if reflect.DeepEqual(expected, value) {
+		reportError(t, expected, value)
+	}
+}
+
+func reportError(t *testing.T, expected, value interface{}) {
+	s1 := fmt.Sprintf("%v", expected)
+	s2 := fmt.Sprintf("%v", value)
+	if len(s1) > 50 || len(s2) > 50 {
+		t.Errorf("expected\n%v\nbut was\n%v", s1, s2)
+	} else {
+		t.Errorf("expected %v but was %v", s1, s2)
 	}
 }

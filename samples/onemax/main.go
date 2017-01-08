@@ -12,7 +12,7 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
-	fitnessFunc := func(individual moea.Individual) float64 {
+	objectiveFunc := func(individual moea.Individual) float64 {
 		arr := individual.Value(0).([]big.Word)
 		result := 0.0
 		n := 0
@@ -29,14 +29,14 @@ func main() {
 	config := &moea.Config{
 		Algorithm:            moea.NewSimpleAlgorithm(),
 		Population:           moea.NewRandomBinaryPopulation(100, []int{20}),
-		FitnessFunc:          fitnessFunc,
+		ObjectiveFunc:        objectiveFunc,
 		MaxGenerations:       50,
 		CrossoverProbability: 1.0,
 		MutationProbability:  0.02,
 	}
-	result, fitness, err := moea.Run(config)
+	result, objective, err := moea.Run(config)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
-	fmt.Println(result, fitness)
+	fmt.Println(result, objective)
 }

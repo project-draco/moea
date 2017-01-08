@@ -3,64 +3,90 @@ package moea
 import "math/rand"
 
 type simpleAlgorithm struct {
-	config *Config
+	config        *Config
+	oldObjectives map[int]float64
+	newObjectives map[int]float64
+	objectivesSum float64
+	oldPopulation Population
+	newPopulation Population
+	mutations     []bool
 }
 
 func NewSimpleAlgorithm() Algorithm {
 	return &simpleAlgorithm{}
 }
 
-func (a *simpleAlgorithm) Generation(t Population) (Population, error) {
-	tt := newPopulation(t.Len())
-	for i := 0; i < t.Len(); i += 2 {
-		child1, child2 := a.crossover(a.selection(t), a.selection(t))
+func (a *simpleAlgorithm) Generation() (Individual, float64, error) {
+	var bestIndividual Individual
+	var bestFit float64
+	newObjectivesSum := 0.0
+	for i := 0; i < a.newPopulation.Len(); i += 2 {
+		child1 := a.newPopulation.Individual(i)
+		child2 := a.newPopulation.Individual(i + 1)
+		a.crossover(a.selection(), a.selection(), child1, child2)
 		a.mutate(child1)
 		a.mutate(child2)
-		tt.setIndividual(child1, i)
-		tt.setIndividual(child2, i+1)
-		tt.setFitness(a.config.FitnessFunc(child1), i)
-		tt.setFitness(a.config.FitnessFunc(child2), i+1)
-	}
-	return tt, nil
-}
-
-func (a *simpleAlgorithm) selection(t Population) Individual {
-	r := rand.Float64() * t.TotalFitness()
-	sum := 0.0
-	for i := 0; i < t.Len(); i++ {
-		sum += t.Fitness(i)
-		if sum >= r {
-			return t.Individual(i)
+		f1 := a.config.ObjectiveFunc(child1)
+		f2 := a.config.ObjectiveFunc(child2)
+		a.newObjectives[i] = f1
+		a.newObjectives[i+1] = f2
+		newObjectivesSum += f1 + f2
+		if f1 > bestFit {
+			bestFit = f1
+			bestIndividual = child1
+		}
+		if f2 > bestFit {
+			bestFit = f2
+			bestIndividual = child2
 		}
 	}
-	return t.Individual(t.Len() - 1)
+	a.oldObjectives, a.newObjectives = a.newObjectives, a.oldObjectives
+	a.objectivesSum = newObjectivesSum
+	a.oldPopulation, a.newPopulation = a.newPopulation, a.oldPopulation
+	return bestIndividual, bestFit, nil
 }
 
-func (a *simpleAlgorithm) crossover(parent1, parent2 Individual) (Individual, Individual) {
+func (a *simpleAlgorithm) selection() Individual {
+	r := rand.Float64() * a.objectivesSum
+	sum := 0.0
+	for i := 0; i < a.oldPopulation.Len(); i++ {
+		sum += a.oldObjectives[i]
+		if sum >= r {
+			return a.oldPopulation.Individual(i)
+		}
+	}
+	return a.oldPopulation.Individual(a.oldPopulation.Len() - 1)
+}
+
+func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual) {
 	if !flip(a.config.CrossoverProbability) {
-		return parent1.Copy(nil, parent1.Len(), parent1.Len()),
-			parent2.Copy(nil, parent2.Len(), parent2.Len())
+		child1.Copy(parent1, 0, child1.Len())
+		child2.Copy(parent2, 0, child2.Len())
+		return
 	}
 	cross := 1 + int(rand.Float64()*float64(parent1.Len()-2))
-	child1 := parent1.Copy(parent2, cross, parent1.Len())
-	child2 := parent2.Copy(parent1, cross, parent2.Len())
-	return child1, child2
+	child1.Copy(parent1, 0, cross)
+	child1.Copy(parent2, cross, child1.Len())
+	child2.Copy(parent2, 0, cross)
+	child2.Copy(parent1, cross, child2.Len())
 }
 
 func (a *simpleAlgorithm) mutate(individual Individual) {
-	mutations := make([]bool, individual.Len())
 	for i := 0; i < individual.Len(); i++ {
-		mutations[i] = flip(a.config.MutationProbability)
+		a.mutations[i] = flip(a.config.MutationProbability)
 	}
-	individual.Mutate(mutations)
+	individual.Mutate(a.mutations)
 }
 
-func (a *simpleAlgorithm) Initialize(config *Config) Population {
+func (a *simpleAlgorithm) Initialize(config *Config) {
 	a.config = config
-	pp := newPopulation(config.Population.Len())
+	a.newObjectives = map[int]float64{}
+	a.oldObjectives = map[int]float64{}
 	for i := 0; i < config.Population.Len(); i++ {
-		pp.setIndividual(config.Population.Individual(i), i)
-		pp.setFitness(a.config.FitnessFunc(pp.Individual(i)), i)
+		a.oldObjectives[i] = a.config.ObjectiveFunc(config.Population.Individual(i))
+		a.objectivesSum += a.oldObjectives[i]
 	}
-	return pp
+	a.oldPopulation = config.Population
+	a.newPopulation = config.Population.Clone()
+	a.mutations = make([]bool, a.oldPopulation.Individual(0).Len())
 }

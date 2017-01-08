@@ -3,49 +3,46 @@ package moea // import "project-draco.io/moea"
 type Config struct {
 	Algorithm            Algorithm
 	Population           Population
-	FitnessFunc          FitnessFunc
+	ObjectiveFunc        ObjectiveFunc
 	MaxGenerations       int
 	CrossoverProbability float64
 	MutationProbability  float64
 }
 
 type Algorithm interface {
-	Generation(Population) (Population, error)
-	Initialize(*Config) Population
+	Generation() (Individual, float64, error)
+	Initialize(*Config)
 }
 
 type Population interface {
 	Len() int
 	Individual(int) Individual
-	Fitness(int) float64
-	TotalFitness() float64
+	Clone() Population
 }
 
 type Individual interface {
 	Len() int
 	Value(int) interface{}
-	Copy(Individual, int, int) Individual
+	Copy(Individual, int, int)
 	Mutate([]bool)
+	Clone() Individual
 }
 
-type FitnessFunc func(Individual) float64
+type ObjectiveFunc func(Individual) float64
 
 func Run(config *Config) (Individual, float64, error) {
-	population := config.Algorithm.Initialize(config)
-	var result Individual
-	var err error
-	bestfit := 0.0
+	config.Algorithm.Initialize(config)
+	bestIndividualEver := config.Population.Individual(0).Clone()
+	bestObjectiveEver := 0.0
 	for i := 0; i < config.MaxGenerations; i++ {
-		population, err = config.Algorithm.Generation(population)
+		individual, objective, err := config.Algorithm.Generation()
 		if err != nil {
 			return nil, 0.0, err
 		}
-		for j := 0; j < population.Len(); j++ {
-			if population.Fitness(j) > bestfit {
-				result = population.Individual(j)
-				bestfit = population.Fitness(j)
-			}
+		if objective > bestObjectiveEver {
+			bestIndividualEver.Copy(individual, 0, bestIndividualEver.Len())
+			bestObjectiveEver = objective
 		}
 	}
-	return result, bestfit, nil
+	return bestIndividualEver, bestObjectiveEver, nil
 }

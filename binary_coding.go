@@ -8,6 +8,13 @@ import (
 	"unsafe"
 )
 
+type binaryPopulation struct {
+	individuals []Individual
+	bi          []binaryIndividual
+	arr         []big.Word
+	vars        []big.Word
+}
+
 type binaryIndividual struct {
 	representation         []big.Word
 	lengths                []int
@@ -32,28 +39,67 @@ func NewRandomBinaryPopulation(size int, lengths []int) Population {
 	if totalLen%wordBitsize > 0 {
 		individualSize++
 	}
-	arr := make([]big.Word, individualSize*size)
-	bi := make([]binaryIndividual, size)
 	variableWordCount, variableWordCountTotal := computeVariableWordCount(lengths)
-	vars := make([]big.Word, variableWordCountTotal*size)
 	varsSlices := make([][]big.Word, len(lengths)*size)
-	result := newPopulation(size)
+	result := &binaryPopulation{
+		make([]Individual, size),
+		make([]binaryIndividual, size),
+		make([]big.Word, individualSize*size),
+		make([]big.Word, variableWordCountTotal*size)}
 	for i := 0; i < size; i++ {
-		bi[i].representation = newBinaryEncoding(arr[i*individualSize : (i+1)*individualSize])
-		bi[i].lengths = lengths
-		bi[i].starts = starts
-		bi[i].totalLen = totalLen
-		bi[i].variables = varsSlices[i*len(lengths) : (i+1)*len(lengths)]
-		v := i * variableWordCountTotal
-		for j := 0; j < len(lengths); j++ {
-			bi[i].variables[j] = vars[v : v+variableWordCount[j]]
-			v += variableWordCount[j]
-		}
-		bi[i].variableWordCount = variableWordCount
-		bi[i].variableWordCountTotal = variableWordCountTotal
-		result.setIndividual(&bi[i], i)
+		result.bi[i].representation = result.arr[i*individualSize : (i+1)*individualSize]
+		randomize(result.bi[i].representation)
+		result.bi[i].lengths = lengths
+		result.bi[i].starts = starts
+		result.bi[i].totalLen = totalLen
+		result.bi[i].variables = varsSlices[i*len(lengths) : (i+1)*len(lengths)]
+		mapVars(&result.bi[i], i*variableWordCountTotal, result.vars, variableWordCount)
+		result.bi[i].variableWordCount = variableWordCount
+		result.bi[i].variableWordCountTotal = variableWordCountTotal
+		result.individuals[i] = &result.bi[i]
 	}
 	return result
+}
+
+func (p *binaryPopulation) Len() int { return len(p.individuals) }
+
+func (p *binaryPopulation) Individual(i int) Individual { return p.individuals[i] }
+
+func (p *binaryPopulation) Clone() Population {
+	if p.Len() == 0 {
+		return p
+	}
+	first := p.individuals[0].(*binaryIndividual)
+	individualSize := len(first.representation)
+	result := &binaryPopulation{
+		make([]Individual, p.Len()),
+		make([]binaryIndividual, p.Len()),
+		make([]big.Word, individualSize*p.Len()),
+		make([]big.Word, first.variableWordCountTotal*p.Len())}
+	varsSlices := make([][]big.Word, len(first.lengths)*p.Len())
+	copy(result.bi, p.bi)
+	copy(result.arr, p.arr)
+	copy(result.vars, p.vars)
+	for i := 0; i < p.Len(); i++ {
+		result.bi[i].representation = result.arr[i*individualSize : (i+1)*individualSize]
+		result.bi[i].variables = varsSlices[i*len(first.lengths) : (i+1)*len(first.lengths)]
+		mapVars(&result.bi[i], i*first.variableWordCountTotal, result.vars, first.variableWordCount)
+		result.individuals[i] = &result.bi[i]
+	}
+	return result
+}
+
+func (r *binaryIndividual) Clone() Individual {
+	result := NewRandomBinaryPopulation(1, r.lengths).Individual(0)
+	result.Copy(r, 0, result.Len())
+	return result
+}
+
+func mapVars(bi *binaryIndividual, v int, vars []big.Word, variableWordCount []int) {
+	for j := 0; j < len(bi.lengths); j++ {
+		bi.variables[j] = vars[v : v+variableWordCount[j]]
+		v += variableWordCount[j]
+	}
 }
 
 func computeVariableWordCount(lengths []int) ([]int, int) {
@@ -66,7 +112,7 @@ func computeVariableWordCount(lengths []int) ([]int, int) {
 	return variableWordCount, variableWordCountTotal
 }
 
-func newBinaryEncoding(representation []big.Word) []big.Word {
+func randomize(representation []big.Word) []big.Word {
 	for i := 0; i < len(representation); i++ {
 		for j := 0; j < wordBitsize; j++ {
 			if flip(0.5) {
@@ -124,55 +170,36 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 	return r.variables[idx]
 }
 
-func (r *binaryIndividual) Copy(individual Individual, start, end int) Individual {
-	result := &binaryIndividual{
-		make([]big.Word, len(r.representation)),
-		r.lengths,
-		r.starts,
-		r.totalLen,
-		make([][]big.Word, len(r.variables)),
-		r.variableWordCount,
-		r.variableWordCountTotal,
-		false}
-	vars := make([]big.Word, r.variableWordCountTotal)
-	v := 0
-	for i := 0; i < len(r.variables); i++ {
-		result.variables[i] = vars[v : v+r.variableWordCount[i]]
-		v += r.variableWordCount[i]
-	}
+func (r *binaryIndividual) Copy(individual Individual, start, end int) {
 	pos := 0
-	var bi *binaryIndividual
-	if individual != nil {
-		bi = individual.(*binaryIndividual)
-	}
+	bi := individual.(*binaryIndividual)
 	for i := 0; i < len(r.representation); i++ {
-		if start >= pos+wordBitsize || end <= pos || individual == nil {
-			result.representation[i] = r.representation[i]
+		if start >= pos+wordBitsize || end <= pos {
+			pos += wordBitsize
+			continue
+		}
+		if start <= pos && end >= pos+wordBitsize {
+			r.representation[i] = bi.representation[i]
 		} else {
-			if start <= pos && end >= pos+wordBitsize {
-				result.representation[i] = bi.representation[i]
-			} else {
-				ii := start - pos
-				if ii < 0 {
-					ii = 0
-				}
-				jj := end - pos
-				if jj > wordBitsize {
-					jj = wordBitsize
-				}
-				ll := jj - ii
-				if i < len(r.representation)-1 {
-					ii = wordBitsize - ii - ll
-				} else {
-					ii = r.totalLen%wordBitsize - ii - ll
-				}
-				result.representation[i] = setbits(r.representation[i],
-					bi.representation[i], uint(ii), uint(ll))
+			ii := start - pos
+			if ii < 0 {
+				ii = 0
 			}
+			jj := end - pos
+			if jj > wordBitsize {
+				jj = wordBitsize
+			}
+			ll := jj - ii
+			if i < len(r.representation)-1 {
+				ii = wordBitsize - ii - ll
+			} else {
+				ii = r.totalLen%wordBitsize - ii - ll
+			}
+			r.representation[i] = setbits(r.representation[i],
+				bi.representation[i], uint(ii), uint(ll))
 		}
 		pos += wordBitsize
 	}
-	return result
 }
 
 func (r *binaryIndividual) Mutate(mutations []bool) {
