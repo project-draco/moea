@@ -200,6 +200,7 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) {
 		}
 		pos += wordBitsize
 	}
+    r.variablesInitialized = false
 }
 
 func (r *binaryIndividual) Mutate(mutations []bool) {
