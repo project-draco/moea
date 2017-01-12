@@ -3,17 +3,18 @@ package moea
 import "math/rand"
 
 type simpleAlgorithm struct {
-	config        *Config
-	oldObjectives map[int]float64
-	newObjectives map[int]float64
-	objectivesSum float64
-	oldPopulation Population
-	newPopulation Population
-	mutations     []bool
+	config         *Config
+	oldObjectives  []float64
+	newObjectives  []float64
+	objectivesSum  float64
+	oldPopulation  Population
+	newPopulation  Population
+	mutations      []bool
+	tournamentSize int
 }
 
-func NewSimpleAlgorithm() Algorithm {
-	return &simpleAlgorithm{}
+func NewSimpleAlgorithm(tournamentSize int) Algorithm {
+	return &simpleAlgorithm{tournamentSize: tournamentSize}
 }
 
 func (a *simpleAlgorithm) Generation() (Individual, float64, error) {
@@ -23,7 +24,7 @@ func (a *simpleAlgorithm) Generation() (Individual, float64, error) {
 	for i := 0; i < a.newPopulation.Len(); i += 2 {
 		child1 := a.newPopulation.Individual(i)
 		child2 := a.newPopulation.Individual(i + 1)
-		a.crossover(a.selection(), a.selection(), child1, child2)
+		a.crossover(a.tournamentSelection(), a.tournamentSelection(), child1, child2)
 		a.mutate(child1)
 		a.mutate(child2)
 		f1 := a.config.ObjectiveFunc(child1)
@@ -46,7 +47,7 @@ func (a *simpleAlgorithm) Generation() (Individual, float64, error) {
 	return bestIndividual, bestFit, nil
 }
 
-func (a *simpleAlgorithm) selection() Individual {
+func (a *simpleAlgorithm) rouletteWheelSelection() Individual {
 	r := rand.Float64() * a.objectivesSum
 	sum := 0.0
 	for i := 0; i < a.oldPopulation.Len(); i++ {
@@ -56,6 +57,17 @@ func (a *simpleAlgorithm) selection() Individual {
 		}
 	}
 	return a.oldPopulation.Individual(a.oldPopulation.Len() - 1)
+}
+
+func (a *simpleAlgorithm) tournamentSelection() Individual {
+	result := -1
+	for i := 0; i < a.tournamentSize; i++ {
+		r := int(rand.Float64() * float64(a.oldPopulation.Len()))
+		if result == -1 || a.oldObjectives[r] > a.oldObjectives[result] {
+			result = r
+		}
+	}
+	return a.oldPopulation.Individual(result)
 }
 
 func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual) {
@@ -80,8 +92,8 @@ func (a *simpleAlgorithm) mutate(individual Individual) {
 
 func (a *simpleAlgorithm) Initialize(config *Config) {
 	a.config = config
-	a.newObjectives = map[int]float64{}
-	a.oldObjectives = map[int]float64{}
+	a.oldObjectives = make([]float64, config.Population.Len())
+	a.newObjectives = make([]float64, config.Population.Len())
 	for i := 0; i < config.Population.Len(); i++ {
 		a.oldObjectives[i] = a.config.ObjectiveFunc(config.Population.Individual(i))
 		a.objectivesSum += a.oldObjectives[i]

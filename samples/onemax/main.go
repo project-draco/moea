@@ -26,14 +26,25 @@ func main() {
 		}
 		return result
 	}
-	config := &moea.Config{
-		Algorithm:            moea.NewSimpleAlgorithm(),
-		Population:           moea.NewRandomBinaryPopulation(100, []int{20}),
-		ObjectiveFunc:        objectiveFunc,
-		MaxGenerations:       50,
-		CrossoverProbability: 1.0,
-		MutationProbability:  0.02,
+	_ /*objectiveFunc2*/ = func(individual moea.Individual) float64 {
+		arr := individual.Value(0).([]bool)
+		result := 0.0
+		for _, x := range arr {
+			if x {
+				result++
+			}
+		}
+		return result
 	}
+	config := &moea.Config{
+		Algorithm:            moea.NewSimpleAlgorithm(10),
+		Population:           moea.NewRandomBinaryPopulation(300, []int{100}),
+		ObjectiveFunc:        objectiveFunc,
+		MaxGenerations:       40,
+		CrossoverProbability: 0.5,
+		MutationProbability:  0.01,
+	}
+	//moea.NewRandomBooleanPopulation(300, []int{100}),
 	result, objective, err := moea.Run(config)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
