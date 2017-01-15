@@ -33,8 +33,9 @@ func main() {
 			arr := individual.Value(0).([]big.Word)
 			result := 0.0
 			n := 0
+			len := individual.Len()
 			for _, x := range arr {
-				for ; n < individual.Len() && x != 0; x >>= 1 {
+				for ; n < len && x != 0; x >>= 1 {
 					if x&1 != 0 {
 						result++
 					}
