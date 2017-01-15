@@ -1,16 +1,16 @@
 package moea
 
-import "math/rand"
-
 type simpleAlgorithm struct {
-	config         *Config
-	oldObjectives  []float64
-	newObjectives  []float64
-	objectivesSum  float64
-	oldPopulation  Population
-	newPopulation  Population
-	mutations      []bool
-	tournamentSize int
+	config               *Config
+	oldObjectives        []float64
+	newObjectives        []float64
+	objectivesSum        float64
+	oldPopulation        Population
+	newPopulation        Population
+	mutations            []bool
+	tournamentSize       int
+	crossoverProbability uint32
+	mutationProbability  uint32
 }
 
 func NewSimpleAlgorithm(tournamentSize int) Algorithm {
@@ -48,7 +48,7 @@ func (a *simpleAlgorithm) Generation() (Individual, float64, error) {
 }
 
 func (a *simpleAlgorithm) rouletteWheelSelection() Individual {
-	r := rand.Float64() * a.objectivesSum
+	r := float64(xorshift()) / float64(MaxUint32) * a.objectivesSum
 	sum := 0.0
 	for i := 0; i < a.oldPopulation.Len(); i++ {
 		sum += a.oldObjectives[i]
@@ -62,7 +62,7 @@ func (a *simpleAlgorithm) rouletteWheelSelection() Individual {
 func (a *simpleAlgorithm) tournamentSelection() Individual {
 	result := -1
 	for i := 0; i < a.tournamentSize; i++ {
-		r := int(rand.Float64() * float64(a.oldPopulation.Len()))
+		r := int(float64(xorshift()) / float64(MaxUint32) * float64(a.oldPopulation.Len()))
 		if result == -1 || a.oldObjectives[r] > a.oldObjectives[result] {
 			result = r
 		}
@@ -71,12 +71,12 @@ func (a *simpleAlgorithm) tournamentSelection() Individual {
 }
 
 func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual) {
-	if !flip(a.config.CrossoverProbability) {
+	if !flipXorshift(a.crossoverProbability) {
 		child1.Copy(parent1, 0, child1.Len())
 		child2.Copy(parent2, 0, child2.Len())
 		return
 	}
-	cross := 1 + int(rand.Float64()*float64(parent1.Len()-2))
+	cross := 1 + int(float64(xorshift())/float64(MaxUint32)*float64(parent1.Len()-2))
 	child1.Copy(parent1, 0, cross)
 	child1.Copy(parent2, cross, child1.Len())
 	child2.Copy(parent2, 0, cross)
@@ -84,8 +84,9 @@ func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual)
 }
 
 func (a *simpleAlgorithm) mutate(individual Individual) {
-	for i := 0; i < individual.Len(); i++ {
-		a.mutations[i] = flip(a.config.MutationProbability)
+	len := individual.Len()
+	for i := 0; i < len; i++ {
+		a.mutations[i] = flipXorshift(a.mutationProbability)
 	}
 	individual.Mutate(a.mutations)
 }
@@ -101,4 +102,6 @@ func (a *simpleAlgorithm) Initialize(config *Config) {
 	a.oldPopulation = config.Population
 	a.newPopulation = config.Population.Clone()
 	a.mutations = make([]bool, a.oldPopulation.Individual(0).Len())
+	a.crossoverProbability = uint32(a.config.CrossoverProbability * float64(MaxUint32))
+	a.mutationProbability = uint32(a.config.MutationProbability * float64(MaxUint32))
 }

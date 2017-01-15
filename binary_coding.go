@@ -115,7 +115,7 @@ func computeVariableWordCount(lengths []int) ([]int, int) {
 func randomize(representation []big.Word) []big.Word {
 	for i := 0; i < len(representation); i++ {
 		for j := 0; j < wordBitsize; j++ {
-			if flip(0.5) {
+			if fairFlipXorshift() {
 				representation[i] |= (1 << uint(j))
 			} else {
 				representation[i] &= ^(1 << uint(j))
@@ -205,16 +205,21 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) {
 
 func (r *binaryIndividual) Mutate(mutations []bool) {
 	rmd := r.totalLen % wordBitsize
+	pos := 0
 	for i := 0; i < len(r.representation); i++ {
+		posj := wordBitsize - 1
+		if i == len(r.representation)-1 {
+			posj = rmd - 1
+		}
 		for j := 0; j < wordBitsize; j++ {
-			pos := i*wordBitsize + j
-			if pos < len(mutations) && mutations[pos] {
-				posj := wordBitsize - j - 1
-				if i == len(r.representation)-1 {
-					posj = rmd - j - 1
-				}
+			if pos >= len(mutations) {
+				break
+			}
+			if mutations[pos] {
 				r.representation[i] ^= 1 << uint(posj)
 			}
+			pos++
+			posj--
 		}
 	}
 	r.variablesInitialized = false

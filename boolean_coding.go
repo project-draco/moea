@@ -27,7 +27,7 @@ func newBooleanIndividual(lengths []int) Individual {
 	for i, l := range lengths {
 		result[i] = make([]bool, l)
 		for j := 0; j < l; j++ {
-			result[i][j] = flip(0.5)
+			result[i][j] = fairFlipXorshift()
 		}
 	}
 	return result

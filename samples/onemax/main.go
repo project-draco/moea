@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"math/rand"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -28,7 +27,7 @@ func main() {
 			f.Close()
 		}()
 	}
-	rand.Seed(time.Now().UTC().UnixNano())
+	moea.XorshiftSeed(uint32(time.Now().UTC().UnixNano()))
 	for i := 0; i < 100; i++ {
 		objectiveFunc := func(individual moea.Individual) float64 {
 			arr := individual.Value(0).([]big.Word)
@@ -56,16 +55,16 @@ func main() {
 		}
 		config := &moea.Config{
 			Algorithm:            moea.NewSimpleAlgorithm(10),
-			Population:           moea.NewRandomBinaryPopulation(300, []int{100}),
+			Population:           moea.NewRandomBinaryPopulation(300, []int{200}),
 			ObjectiveFunc:        objectiveFunc,
 			MaxGenerations:       40,
 			CrossoverProbability: 0.5,
 			MutationProbability:  0.01,
 		}
-		result, objective, err := moea.Run(config)
+		_, _ /* result, objective*/, err := moea.Run(config)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		fmt.Println(result, objective)
+		// fmt.Println(result, objective)
 	}
 }
