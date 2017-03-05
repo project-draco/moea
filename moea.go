@@ -1,12 +1,13 @@
 package moea // import "project-draco.io/moea"
 
 type Config struct {
-	Algorithm            Algorithm
-	Population           Population
-	ObjectiveFunc        ObjectiveFunc
-	MaxGenerations       int
-	CrossoverProbability float64
-	MutationProbability  float64
+	Algorithm             Algorithm
+	Population            Population
+	ObjectiveFunc         ObjectiveFunc
+	MaxGenerations        int
+	CrossoverProbability  float64
+	MutationProbability   float64
+	RandomNumberGenerator RNG
 }
 
 type Algorithm interface {

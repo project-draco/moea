@@ -16,18 +16,19 @@ func (p booleanPopulation) Clone() Population {
 
 func NewRandomBooleanPopulation(size int, lengths []int) Population {
 	result := make(booleanPopulation, size)
+	rng := NewXorshift()
 	for i := 0; i < size; i++ {
-		result[i] = newBooleanIndividual(lengths)
+		result[i] = newBooleanIndividual(lengths, rng)
 	}
 	return result
 }
 
-func newBooleanIndividual(lengths []int) Individual {
+func newBooleanIndividual(lengths []int, rng RNG) Individual {
 	result := make(booleanIndividual, len(lengths))
 	for i, l := range lengths {
 		result[i] = make([]bool, l)
 		for j := 0; j < l; j++ {
-			result[i][j] = fairFlipXorshift()
+			result[i][j] = rng.FairFlip()
 		}
 	}
 	return result

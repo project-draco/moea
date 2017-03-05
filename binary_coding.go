@@ -46,9 +46,10 @@ func NewRandomBinaryPopulation(size int, lengths []int) Population {
 		make([]binaryIndividual, size),
 		make([]big.Word, individualSize*size),
 		make([]big.Word, variableWordCountTotal*size)}
+	rng := NewXorshift()
 	for i := 0; i < size; i++ {
 		result.bi[i].representation = result.arr[i*individualSize : (i+1)*individualSize]
-		randomize(result.bi[i].representation)
+		randomize(result.bi[i].representation, rng)
 		result.bi[i].lengths = lengths
 		result.bi[i].starts = starts
 		result.bi[i].totalLen = totalLen
@@ -112,10 +113,10 @@ func computeVariableWordCount(lengths []int) ([]int, int) {
 	return variableWordCount, variableWordCountTotal
 }
 
-func randomize(representation []big.Word) []big.Word {
+func randomize(representation []big.Word, rng RNG) []big.Word {
 	for i := 0; i < len(representation); i++ {
 		for j := 0; j < wordBitsize; j++ {
-			if fairFlipXorshift() {
+			if rng.FairFlip() {
 				representation[i] |= (1 << uint(j))
 			} else {
 				representation[i] &= ^(1 << uint(j))

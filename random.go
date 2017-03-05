@@ -2,38 +2,53 @@ package moea
 
 import "math/rand"
 
+type RNG interface {
+	Flip(probability float64) bool
+	FairFlip() bool
+	Float64() float64
+}
+
 const (
 	MaxUint32     = ^uint32(0)
 	HalfMaxUint32 = MaxUint32 >> 1
 )
 
-var (
-	x uint32 = 123456789
-	y uint32 = 362436069
-	z uint32 = 521288629
-	w uint32 = 88675123
-	t uint32
-)
-
-func XorshiftSeed(seed uint32) {
-	w = seed
+func NewXorshift() RNG {
+	return NewXorshiftWithSeed(88675123)
 }
 
-func xorshift() uint32 {
-	t = x ^ (x << 11)
-	x = y
-	y = z
-	z = w
-	w = w ^ (w >> 19) ^ (t ^ (t >> 8))
-	return w
+func NewXorshiftWithSeed(seed uint32) RNG {
+	return &Xorshift{
+		x: 123456789,
+		y: 362436069,
+		z: 521288629,
+		w: seed,
+	}
 }
 
-func flipXorshift(probability uint32) bool {
-	return xorshift() < probability
+type Xorshift struct {
+	x, y, z, w, t uint32
 }
 
-func fairFlipXorshift() bool {
-	return flipXorshift(HalfMaxUint32)
+func (s *Xorshift) Flip(probability float64) bool {
+	return s.xorshift() < uint32(probability)
+}
+
+func (s *Xorshift) FairFlip() bool {
+	return s.Flip(float64(HalfMaxUint32))
+}
+
+func (s *Xorshift) Float64() float64 {
+	return float64(s.xorshift())
+}
+
+func (s *Xorshift) xorshift() uint32 {
+	s.t = s.x ^ (s.x << 11)
+	s.x = s.y
+	s.y = s.z
+	s.z = s.w
+	s.w = s.w ^ (s.w >> 19) ^ (s.t ^ (s.t >> 8))
+	return s.w
 }
 
 func flip(probability float64) bool {
