@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"time"
 
@@ -52,7 +53,7 @@ func main() {
 		}
 		return result
 	}
-	for i := 0; i < 100; i++ {
+	f := func(seed uint32) {
 		config := &moea.Config{
 			Algorithm:  moea.NewSimpleAlgorithm(10),
 			Population: moea.NewRandomBinaryPopulation(300, []int{200}),
@@ -61,7 +62,7 @@ func main() {
 			MaxGenerations:        40,
 			CrossoverProbability:  0.5,
 			MutationProbability:   0.01,
-			RandomNumberGenerator: moea.NewXorshiftWithSeed(uint32(time.Now().UTC().UnixNano())),
+			RandomNumberGenerator: moea.NewXorshiftWithSeed(seed),
 		}
 		_, _, err := moea.Run(config)
 		// result, objective, err := moea.Run(config)
@@ -69,5 +70,18 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		// fmt.Println(result, objective)
+	}
+	var numCPU = runtime.GOMAXPROCS(0)
+	c := make(chan int, numCPU)
+	for i := 0; i < numCPU; i++ {
+		go func() {
+			for j := 0; j < 100/numCPU; j++ {
+				f(uint32(time.Now().UTC().UnixNano()))
+			}
+			c <- 1
+		}()
+	}
+	for i := 0; i < numCPU; i++ {
+		<-c
 	}
 }
