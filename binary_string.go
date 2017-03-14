@@ -194,10 +194,8 @@ func (i *bsi) Next() bool {
 		return false
 	}
 	if i.i == 0 {
-		if i.w < len(i.bs.w)-2 {
-			i.i = wordBitsize - 1
-			i.w++
-		}
+		i.i = wordBitsize - 1
+		i.w++
 		if i.w == len(i.bs.w)-1 && i.bs.l%wordBitsize > 0 {
 			i.i = i.bs.l%wordBitsize - 1
 		}
@@ -209,7 +207,7 @@ func (i *bsi) Next() bool {
 }
 
 func (i *bsi) Test() bool {
-	return i.bs.w[i.w]&(1<<uint(i.i)) == 1
+	return i.bs.w[i.w]&(1<<uint(i.i)) != 0
 }
 
 func (i *bsi) Set() {
@@ -244,7 +242,7 @@ func (b *bs) SetString(s string) {
 
 func (bsi *bsi) setPosition(i int) {
 	bsi.w = i / wordBitsize
-	bsi.i = i % wordBitsize
+	bsi.i = wordBitsize - i%wordBitsize - 1
 	bsi.j = i
 }
 

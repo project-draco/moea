@@ -112,6 +112,17 @@ func TestNewFromBigInt(t *testing.T) {
 		newFromBigInts([]*big.Int{i.Lsh(i, uint(wordBitsize))}).String())
 }
 
+func TestTest(t *testing.T) {
+	s := strings.Repeat("1", wordBitsize*3+8)
+	bi := newFromString([]string{s})
+	count := 0
+	for i := bi.Value(0).(BinaryString).Iterator(); i.Next(); {
+		assertEqual(t, true, i.Test())
+		count++
+	}
+	assertEqual(t, wordBitsize*3+8, count)
+}
+
 func assertEqual(t *testing.T, expected, value interface{}) {
 	if !reflect.DeepEqual(expected, value) {
 		reportError(t, "", expected, value)
