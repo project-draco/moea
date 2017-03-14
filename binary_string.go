@@ -181,7 +181,7 @@ func (b *bs) Copy(other BinaryString, start, end int) {
 
 func (b *bs) Iterator() BinaryStringIterator {
 	b.i.w = 0
-	b.i.i = wordBitsize - 1
+	b.i.i = wordBitsize
 	if len(b.w) == 1 {
 		b.i.i = b.l
 	}
