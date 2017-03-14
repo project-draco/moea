@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/big"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -29,16 +28,11 @@ func main() {
 		}()
 	}
 	objectiveFunc := func(individual moea.Individual) float64 {
-		arr := individual.Value(0).([]big.Word)
+		bs := individual.Value(0).(moea.BinaryString)
 		result := 0.0
-		n := 0
-		len := individual.Len()
-		for _, x := range arr {
-			for ; n < len && x != 0; x >>= 1 {
-				if x&1 != 0 {
-					result++
-				}
-				n++
+		for i := bs.Iterator(); i.Next(); {
+			if i.Test() {
+				result++
 			}
 		}
 		return result
@@ -54,15 +48,16 @@ func main() {
 		return result
 	}
 	f := func(seed uint32) {
+		rng := moea.NewXorshiftWithSeed(seed)
 		config := &moea.Config{
 			Algorithm:  moea.NewSimpleAlgorithm(10),
-			Population: moea.NewRandomBinaryPopulation(300, []int{200}),
+			Population: moea.NewRandomBinaryPopulation(300, []int{200}, nil, rng),
 			// Population:           moea.NewRandomBooleanPopulation(300, []int{200}),
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,
 			CrossoverProbability:  0.5,
 			MutationProbability:   0.01,
-			RandomNumberGenerator: moea.NewXorshiftWithSeed(seed),
+			RandomNumberGenerator: rng,
 		}
 		_, _, err := moea.Run(config)
 		// result, objective, err := moea.Run(config)
