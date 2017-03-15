@@ -112,7 +112,7 @@ func TestNewFromBigInt(t *testing.T) {
 		newFromBigInts([]*big.Int{i.Lsh(i, uint(wordBitsize))}).String())
 }
 
-func TestTest(t *testing.T) {
+func TestBinaryString(t *testing.T) {
 	s := strings.Repeat("1", wordBitsize*3+8)
 	bi := newFromString([]string{s})
 	count := 0
@@ -121,6 +121,19 @@ func TestTest(t *testing.T) {
 		count++
 	}
 	assertEqual(t, wordBitsize*3+8, count)
+	for i := bi.Value(0).(BinaryString).Iterator(); i.Next(); {
+		i.Clear()
+	}
+	assertEqual(t, strings.Repeat("0", wordBitsize*3+8), bi.Value(0).(BinaryString).String())
+	for i := bi.Value(0).(BinaryString).Iterator(); i.Next(); {
+		i.Set()
+	}
+	assertEqual(t, strings.Repeat("1", wordBitsize*3+8), bi.Value(0).(BinaryString).String())
+	bs := bi.Value(0).(BinaryString)
+	for i := 0; i < wordBitsize*3+8; i++ {
+		bs.Clear(i)
+	}
+	assertEqual(t, strings.Repeat("0", wordBitsize*3+8), bi.Value(0).(BinaryString).String())
 }
 
 func assertEqual(t *testing.T, expected, value interface{}) {

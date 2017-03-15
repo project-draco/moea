@@ -242,7 +242,11 @@ func (b *bs) SetString(s string) {
 
 func (bsi *bsi) setPosition(i int) {
 	bsi.w = i / wordBitsize
-	bsi.i = wordBitsize - i%wordBitsize - 1
+	if bsi.w == len(bsi.bs.w)-1 {
+		bsi.i = i % wordBitsize
+	} else {
+		bsi.i = wordBitsize - i%wordBitsize - 1
+	}
 	bsi.j = i
 }
 
