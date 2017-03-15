@@ -112,7 +112,10 @@ func (p *binaryPopulation) Clone() Population {
 		return p
 	}
 	first := p.individuals[0].(*binaryIndividual)
-	individualSize := first.representation.Len()
+	individualSize := first.representation.Len() / wordBitsize
+	if first.representation.Len()%wordBitsize > 0 {
+		individualSize++
+	}
 	result := &binaryPopulation{
 		make([]Individual, p.Len()),
 		make([]binaryIndividual, p.Len()),
@@ -129,7 +132,7 @@ func (p *binaryPopulation) Clone() Population {
 	copy(result.vars, p.vars)
 	for i := 0; i < p.Len(); i++ {
 		result.bi[i].representation =
-			newBinString(individualSize, result.arr[i*individualSize:(i+1)*individualSize])
+			newBinString(first.representation.Len(), result.arr[i*individualSize:(i+1)*individualSize])
 		// result.bi[i].variables = varsSlices[i*len(first.lengths) : (i+1)*len(first.lengths)]
 		result.bi[i].variables = pointersToAllVariables[i*len(first.lengths) : (i+1)*len(first.lengths)]
 		mapVars(&result.bi[i], i*first.variableWordCountTotal, result.vars, first.variableWordCount)

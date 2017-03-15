@@ -81,22 +81,33 @@ func TestCopy(t *testing.T) {
 	i1.Copy(i0, 0, i1.Len())
 	i1.Copy(i2, wordBitsize, wordBitsize+1)
 	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-5)+"100111011", i1.String())
+	i1 = newFromString([]string{strings.Repeat("0", wordBitsize*3+8)})
+	i2 = newFromString([]string{strings.Repeat("1", wordBitsize*3+8)})
+	i1.Copy(i2, 0, wordBitsize*3+8)
+	assertEqual(t, strings.Repeat("1", wordBitsize*3+8), i1.String())
 }
 
 func TestMutate(t *testing.T) {
 	i := newFromString([]string{"0000"})
 	i.Mutate([]bool{false, false, true, false})
 	assertEqual(t, "0010", i.String())
+	i = newFromString([]string{strings.Repeat("0", wordBitsize*3+8)})
+	m := []bool{}
+	for i := 0; i < wordBitsize*3+8; i++ {
+		m = append(m, true)
+	}
+	i.Mutate(m)
+	assertEqual(t, strings.Repeat("1", wordBitsize*3+8), i.String())
 }
 
 func TestClone(t *testing.T) {
-	p := NewRandomBinaryPopulation(1, []int{1}, nil, NewXorshift())
+	p := NewRandomBinaryPopulation(1, []int{wordBitsize*3 + 8}, nil, NewXorshift())
 	c := p.Clone()
-	assertEqual(t, p.Individual(0).Value(0).(BinaryString).Int(),
-		c.Individual(0).Value(0).(BinaryString).Int())
-	c.Individual(0).Mutate([]bool{true})
-	assertNotEqual(t, p.Individual(0).Value(0).(BinaryString).Int(),
-		c.Individual(0).Value(0).(BinaryString).Int())
+	assertEqual(t, p.Individual(0).(fmt.Stringer).String(), c.Individual(0).(fmt.Stringer).String())
+	m := [wordBitsize*3 + 8]bool{}
+	m[0] = true
+	c.Individual(0).Mutate(m[0:])
+	assertNotEqual(t, p.Individual(0).(fmt.Stringer).String(), c.Individual(0).(fmt.Stringer).String())
 }
 
 func TestAsBigInt(t *testing.T) {
