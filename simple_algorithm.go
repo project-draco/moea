@@ -8,6 +8,7 @@ type simpleAlgorithm struct {
 	oldPopulation        Population
 	newPopulation        Population
 	mutations            []bool
+	mutationsIndexes     []int
 	tournamentSize       int
 	crossoverProbability float64
 	mutationProbability  float64
@@ -85,10 +86,15 @@ func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual)
 
 func (a *simpleAlgorithm) mutate(individual Individual) {
 	len := individual.Len()
+	j := 0
 	for i := 0; i < len; i++ {
-		a.mutations[i] = a.config.RandomNumberGenerator.Flip(a.mutationProbability)
+		f := a.config.RandomNumberGenerator.Flip(a.mutationProbability)
+		if f {
+			a.mutationsIndexes[j] = i
+			j++
+		}
 	}
-	individual.Mutate(a.mutations)
+	individual.Mutate(a.mutationsIndexes[0:j])
 }
 
 func (a *simpleAlgorithm) Initialize(config *Config) {
@@ -102,6 +108,7 @@ func (a *simpleAlgorithm) Initialize(config *Config) {
 	a.oldPopulation = config.Population
 	a.newPopulation = config.Population.Clone()
 	a.mutations = make([]bool, a.oldPopulation.Individual(0).Len())
+	a.mutationsIndexes = make([]int, a.oldPopulation.Individual(0).Len())
 	a.crossoverProbability = a.config.CrossoverProbability * float64(MaxUint32)
 	a.mutationProbability = a.config.MutationProbability * float64(MaxUint32)
 }

@@ -25,7 +25,7 @@ type Individual interface {
 	Len() int
 	Value(int) interface{}
 	Copy(Individual, int, int)
-	Mutate([]bool)
+	Mutate([]int)
 	Clone() Individual
 }
 

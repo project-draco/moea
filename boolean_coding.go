@@ -59,12 +59,13 @@ func (bi booleanIndividual) Copy(individual Individual, start, end int) {
 	}
 }
 
-func (bi booleanIndividual) Mutate(mutations []bool) {
-	k := 0
+func (bi booleanIndividual) Mutate(mutations []int) {
+	k, m := 0, 0
 	for i, v := range bi {
 		for j := 0; j < len(v); j++ {
-			if mutations[k] {
+			if k == mutations[m] {
 				bi[i][j] = !bi[i][j]
+				m++
 			}
 			k++
 		}

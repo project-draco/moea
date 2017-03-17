@@ -89,12 +89,12 @@ func TestCopy(t *testing.T) {
 
 func TestMutate(t *testing.T) {
 	i := newFromString([]string{"0000"})
-	i.Mutate([]bool{false, false, true, false})
+	i.Mutate([]int{2})
 	assertEqual(t, "0010", i.String())
 	i = newFromString([]string{strings.Repeat("0", wordBitsize*3+8)})
-	m := []bool{}
+	m := []int{}
 	for i := 0; i < wordBitsize*3+8; i++ {
-		m = append(m, true)
+		m = append(m, i)
 	}
 	i.Mutate(m)
 	assertEqual(t, strings.Repeat("1", wordBitsize*3+8), i.String())
@@ -104,9 +104,8 @@ func TestClone(t *testing.T) {
 	p := NewRandomBinaryPopulation(1, []int{wordBitsize*3 + 8}, nil, NewXorshift())
 	c := p.Clone()
 	assertEqual(t, p.Individual(0).(fmt.Stringer).String(), c.Individual(0).(fmt.Stringer).String())
-	m := [wordBitsize*3 + 8]bool{}
-	m[0] = true
-	c.Individual(0).Mutate(m[0:])
+	m := []int{0}
+	c.Individual(0).Mutate(m)
 	assertNotEqual(t, p.Individual(0).(fmt.Stringer).String(), c.Individual(0).(fmt.Stringer).String())
 }
 

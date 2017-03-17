@@ -199,15 +199,9 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) {
 	r.variablesInitialized = false
 }
 
-func (r *binaryIndividual) Mutate(mutations []bool) {
-	var w, j int
-	it := r.representation.Iterator(&w, &j)
-	l := r.Len()
-	for i := 0; i < l; i++ {
-		it.Next(&w, &j)
-		if mutations[i] {
-			it.Flip(w, j)
-		}
+func (r *binaryIndividual) Mutate(mutations []int) {
+	for i := 0; i < len(mutations); i++ {
+		r.representation.Flip(mutations[i])
 	}
 	r.variablesInitialized = false
 }
