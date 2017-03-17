@@ -127,17 +127,24 @@ func TestBinaryString(t *testing.T) {
 	s := strings.Repeat("1", wordBitsize*3+8)
 	bi := newFromString([]string{s})
 	count := 0
-	for i := bi.Value(0).(BinaryString).Iterator(); i.Next(); {
-		assertEqual(t, true, i.Test())
+	var w, j int
+	it := bi.Value(0).(BinaryString).Iterator(&w, &j)
+	for i := 0; i < bi.Len(); i++ {
+		it.Next(&w, &j)
+		assertEqual(t, true, it.Test(w, j))
 		count++
 	}
 	assertEqual(t, wordBitsize*3+8, count)
-	for i := bi.Value(0).(BinaryString).Iterator(); i.Next(); {
-		i.Clear()
+	it = bi.Value(0).(BinaryString).Iterator(&w, &j)
+	for i := 0; i < bi.Len(); i++ {
+		it.Next(&w, &j)
+		it.Clear(w, j)
 	}
 	assertEqual(t, strings.Repeat("0", wordBitsize*3+8), bi.Value(0).(BinaryString).String())
-	for i := bi.Value(0).(BinaryString).Iterator(); i.Next(); {
-		i.Set()
+	it = bi.Value(0).(BinaryString).Iterator(&w, &j)
+	for i := 0; i < bi.Len(); i++ {
+		it.Next(&w, &j)
+		it.Set(w, j)
 	}
 	assertEqual(t, strings.Repeat("1", wordBitsize*3+8), bi.Value(0).(BinaryString).String())
 	bs := bi.Value(0).(BinaryString)

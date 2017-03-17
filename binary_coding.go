@@ -165,11 +165,15 @@ func computeVariableWordCount(lengths []int) ([]int, int) {
 }
 
 func randomize(representation BinaryString, rng RNG) {
-	for i := representation.Iterator(); i.Next(); {
+	var w, j int
+	it := representation.Iterator(&w, &j)
+	l := representation.Len()
+	for i := 0; i < l; i++ {
+		it.Next(&w, &j)
 		if rng.FairFlip() {
-			i.Set()
+			it.Set(w, j)
 		} else {
-			i.Clear()
+			it.Clear(w, j)
 		}
 	}
 }
@@ -196,12 +200,14 @@ func (r *binaryIndividual) Copy(individual Individual, start, end int) {
 }
 
 func (r *binaryIndividual) Mutate(mutations []bool) {
-	j := 0
-	for i := r.representation.Iterator(); i.Next(); {
-		if mutations[j] {
-			i.Flip()
+	var w, j int
+	it := r.representation.Iterator(&w, &j)
+	l := r.Len()
+	for i := 0; i < l; i++ {
+		it.Next(&w, &j)
+		if mutations[i] {
+			it.Flip(w, j)
 		}
-		j++
 	}
 	r.variablesInitialized = false
 }

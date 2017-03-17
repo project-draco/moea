@@ -30,8 +30,12 @@ func main() {
 	objectiveFunc := func(individual moea.Individual) float64 {
 		bs := individual.Value(0).(moea.BinaryString)
 		result := 0.0
-		for i := bs.Iterator(); i.Next(); {
-			if i.Test() {
+		var w, j int
+		it := bs.Iterator(&w, &j)
+		l := individual.Len()
+		for i := 0; i < l; i++ {
+			it.Next(&w, &j)
+			if it.Test(w, j) {
 				result++
 			}
 		}
@@ -59,12 +63,12 @@ func main() {
 			MutationProbability:   0.01,
 			RandomNumberGenerator: rng,
 		}
-		// _, _, err := moea.Run(config)
-		result, objective, err := moea.Run(config)
+		_, _, err := moea.Run(config)
+		// result, objective, err := moea.Run(config)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		fmt.Println(result, objective)
+		// fmt.Println(result, objective)
 	}
 	var numCPU = runtime.GOMAXPROCS(0)
 	c := make(chan int, numCPU)

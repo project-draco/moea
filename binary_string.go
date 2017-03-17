@@ -17,16 +17,16 @@ type BinaryString interface {
 	String() string
 	Slice(i, j int, dest BinaryString)
 	Copy(bs BinaryString, start, end int)
-	Iterator() BinaryStringIterator
+	Iterator(w, j *int) BinaryStringIterator
 	SetString(string)
 }
 
 type BinaryStringIterator interface {
-	Test() bool
-	Set()
-	Clear()
-	Flip()
-	Next() bool
+	Test(w, j int) bool
+	Set(w, j int)
+	Clear(w, j int)
+	Flip(w, j int)
+	Next(w, j *int)
 }
 
 type bs struct {
@@ -36,8 +36,7 @@ type bs struct {
 }
 
 type bsi struct {
-	bs      *bs
-	w, i, j int
+	bs *bs
 }
 
 func newBinString(l int, w []big.Word) *bs {
@@ -65,23 +64,27 @@ func (b *bs) Len() int {
 }
 
 func (b *bs) Test(i int) bool {
-	b.i.setPosition(i)
-	return b.i.Test()
+	var w, j int
+	b.i.setPosition(i, &w, &j)
+	return b.i.Test(w, j)
 }
 
 func (b *bs) Set(i int) {
-	b.i.setPosition(i)
-	b.i.Set()
+	var w, j int
+	b.i.setPosition(i, &w, &j)
+	b.i.Set(w, j)
 }
 
 func (b *bs) Clear(i int) {
-	b.i.setPosition(i)
-	b.i.Clear()
+	var w, j int
+	b.i.setPosition(i, &w, &j)
+	b.i.Clear(w, j)
 }
 
 func (b *bs) Flip(i int) {
-	b.i.setPosition(i)
-	b.i.Flip()
+	var w, j int
+	b.i.setPosition(i, &w, &j)
+	b.i.Flip(w, j)
 }
 
 func (b *bs) Int() *big.Int {
@@ -179,47 +182,41 @@ func (b *bs) Copy(other BinaryString, start, end int) {
 	}
 }
 
-func (b *bs) Iterator() BinaryStringIterator {
-	b.i.w = 0
-	b.i.i = wordBitsize
+func (b *bs) Iterator(w, j *int) BinaryStringIterator {
+	*w = 0
+	*j = wordBitsize
 	if len(b.w) == 1 {
-		b.i.i = b.l
+		*j = b.l
 	}
-	b.i.j = 0
 	return b.i
 }
 
-func (i *bsi) Next() bool {
-	if i.j >= i.bs.l {
-		return false
-	}
-	if i.i == 0 {
-		i.i = wordBitsize - 1
-		i.w++
-		if i.w == len(i.bs.w)-1 && i.bs.l%wordBitsize > 0 {
-			i.i = i.bs.l%wordBitsize - 1
+func (i *bsi) Next(w, j *int) {
+	if *j == 0 {
+		*j = wordBitsize - 1
+		*w++
+		if *w == len(i.bs.w)-1 {
+			*j = i.bs.l%wordBitsize - 1
 		}
 	} else {
-		i.i--
+		*j--
 	}
-	i.j++
-	return true
 }
 
-func (i *bsi) Test() bool {
-	return i.bs.w[i.w]&(1<<uint(i.i)) != 0
+func (i *bsi) Test(w, j int) bool {
+	return i.bs.w[w]&(1<<uint(j)) != 0
 }
 
-func (i *bsi) Set() {
-	i.bs.w[i.w] |= (1 << uint(i.i))
+func (i *bsi) Set(w, j int) {
+	i.bs.w[w] |= (1 << uint(j))
 }
 
-func (i *bsi) Clear() {
-	i.bs.w[i.w] &= ^(1 << uint(i.i))
+func (i *bsi) Clear(w, j int) {
+	i.bs.w[w] &= ^(1 << uint(j))
 }
 
-func (i *bsi) Flip() {
-	i.bs.w[i.w] ^= 1 << uint(i.i)
+func (i *bsi) Flip(w, j int) {
+	i.bs.w[w] ^= 1 << uint(j)
 }
 
 func (b *bs) SetString(s string) {
@@ -240,14 +237,13 @@ func (b *bs) SetString(s string) {
 	}
 }
 
-func (bsi *bsi) setPosition(i int) {
-	bsi.w = i / wordBitsize
-	if bsi.w == len(bsi.bs.w)-1 {
-		bsi.i = i % wordBitsize
+func (bsi *bsi) setPosition(i int, w, j *int) {
+	*w = i / wordBitsize
+	if *w == len(bsi.bs.w)-1 {
+		*j = i % wordBitsize
 	} else {
-		bsi.i = wordBitsize - i%wordBitsize - 1
+		*j = wordBitsize - i%wordBitsize - 1
 	}
-	bsi.j = i
 }
 
 func setbits(destination, source big.Word, at, numbits uint) big.Word {
