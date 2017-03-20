@@ -30,20 +30,22 @@ type BinaryStringIterator interface {
 }
 
 type bs struct {
-	w   []big.Word
-	l   int
-	bsi *bsi
+	w       []big.Word
+	bigbits []big.Word
+	bigint  *big.Int
+	l       int
+	bsi     *bsi
 }
 
 type bsi struct{ *bs }
 
-func newBinString(l int, w []big.Word) *bs {
+func newBinString(l int, w []big.Word, bigint *big.Int, bigbits []big.Word) *bs {
 	result := &bs{}
-	result.init(l, w)
+	result.init(l, w, bigint, bigbits)
 	return result
 }
 
-func (b *bs) init(l int, w []big.Word) {
+func (b *bs) init(l int, w []big.Word, bigint *big.Int, bigbits []big.Word) {
 	words := l / wordBitsize
 	if l%wordBitsize > 0 {
 		words++
@@ -51,8 +53,15 @@ func (b *bs) init(l int, w []big.Word) {
 	if w == nil {
 		w = make([]big.Word, words)
 	}
+	if bigbits == nil {
+		bigbits = make([]big.Word, words)
+		bigint = new(big.Int)
+		bigint.SetBits(bigbits)
+	}
 	b.w = w
 	b.l = l
+	b.bigbits = bigbits
+	b.bigint = bigint
 	b.bsi = &bsi{b}
 }
 
@@ -85,11 +94,19 @@ func (b *bs) Flip(i int) {
 }
 
 func (b *bs) Int() *big.Int {
-	i, ok := new(big.Int).SetString(b.String(), 2)
-	if !ok {
-		panic("invalid binary string")
+	for i := 0; i < len(b.w)-1; i++ {
+		b.bigbits[len(b.w)-2-i] = b.w[i]
 	}
-	return i
+	if len(b.w) > 1 {
+		b.bigint.SetBits(b.bigbits)
+		b.bigint = b.bigint.Lsh(b.bigint, uint(b.l%wordBitsize))
+		b.bigbits = b.bigint.Bits()
+	}
+	if len(b.w) > 0 && len(b.bigbits) > 0 {
+		b.bigbits[0] += b.w[len(b.w)-1]
+	}
+	b.bigint.SetBits(b.bigbits)
+	return b.bigint
 }
 
 func (b *bs) String() string {

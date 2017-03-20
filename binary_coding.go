@@ -85,7 +85,7 @@ func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng RNG)
 		make([]big.Word, variableWordCountTotal*size)}
 	for i := 0; i < size; i++ {
 		result.bi[i].representation =
-			newBinString(totalLen, result.arr[i*individualSize:(i+1)*individualSize])
+			newBinString(totalLen, result.arr[i*individualSize:(i+1)*individualSize], nil, nil)
 		randomize(result.bi[i].representation, rng)
 		result.bi[i].lengths = lengths
 		result.bi[i].bounds = bounds
@@ -132,7 +132,7 @@ func (p *binaryPopulation) Clone() Population {
 	copy(result.vars, p.vars)
 	for i := 0; i < p.Len(); i++ {
 		result.bi[i].representation =
-			newBinString(first.representation.Len(), result.arr[i*individualSize:(i+1)*individualSize])
+			newBinString(first.representation.Len(), result.arr[i*individualSize:(i+1)*individualSize], nil, nil)
 		// result.bi[i].variables = varsSlices[i*len(first.lengths) : (i+1)*len(first.lengths)]
 		result.bi[i].variables = pointersToAllVariables[i*len(first.lengths) : (i+1)*len(first.lengths)]
 		mapVars(&result.bi[i], i*first.variableWordCountTotal, result.vars, first.variableWordCount)
@@ -149,7 +149,7 @@ func (r *binaryIndividual) Clone() Individual {
 
 func mapVars(bi *binaryIndividual, v int, vars []big.Word, variableWordCount []int) {
 	for j := 0; j < len(bi.lengths); j++ {
-		bi.variables[j].init(bi.lengths[j], vars[v:v+variableWordCount[j]])
+		bi.variables[j].init(bi.lengths[j], vars[v:v+variableWordCount[j]], nil, nil)
 		v += variableWordCount[j]
 	}
 }
@@ -235,13 +235,13 @@ func newFromString(s []string) *binaryIndividual {
 		bi.totalLen += len(each)
 		ss += s[i]
 	}
-	bi.representation = newBinString(len(ss), nil)
+	bi.representation = newBinString(len(ss), nil, nil, nil)
 	bi.representation.SetString(ss)
 	bi.variableWordCount, bi.variableWordCountTotal = computeVariableWordCount(bi.lengths)
 	vars := make([]big.Word, bi.variableWordCountTotal)
 	v := 0
 	for i := 0; i < len(bi.variables); i++ {
-		bi.variables[i] = newBinString(bi.lengths[i], vars[v:v+bi.variableWordCount[i]])
+		bi.variables[i] = newBinString(bi.lengths[i], vars[v:v+bi.variableWordCount[i]], nil, nil)
 		v += bi.variableWordCount[i]
 	}
 	return bi

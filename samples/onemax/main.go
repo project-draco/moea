@@ -60,7 +60,7 @@ func main() {
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,
 			CrossoverProbability:  0.5,
-			MutationProbability:   0.01,
+			MutationProbability:   1.0 / 200,
 			RandomNumberGenerator: rng,
 		}
 		_, _, err := moea.Run(config)

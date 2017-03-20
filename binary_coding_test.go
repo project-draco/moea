@@ -17,7 +17,7 @@ func TestNewFromString(t *testing.T) {
 	assertEqual(t, []big.Word{0x0187}, bi.representation.(*bs).w)
 	assertEqual(t, []int{0, 2, 6}, bi.starts)
 	assertEqual(t, big.NewInt(3), bi.Value(0).(BinaryString).Int())
-	assertEqual(t, big.NewInt(0), bi.Value(1).(BinaryString).Int())
+	assertEqual(t, big.NewInt(0).Bytes(), bi.Value(1).(BinaryString).Int().Bytes())
 	assertEqual(t, big.NewInt(7), bi.Value(2).(BinaryString).Int())
 	bi = newFromString([]string{"1111", strings.Repeat("0", wordBitsize), "1111"})
 	assertEqual(t, "1111"+strings.Repeat("0", wordBitsize)+"1111", bi.String())
@@ -26,7 +26,7 @@ func TestNewFromString(t *testing.T) {
 	assertEqual(t, []big.Word{0xf << uint(wordBitsize-4), 0xf}, bi.representation.(*bs).w)
 	assertEqual(t, []int{0, 4, wordBitsize + 4}, bi.starts)
 	assertEqual(t, big.NewInt(0xf), bi.Value(0).(BinaryString).Int())
-	assertEqual(t, big.NewInt(0), bi.Value(1).(BinaryString).Int())
+	assertEqual(t, big.NewInt(0).Bytes(), bi.Value(1).(BinaryString).Int().Bytes())
 	assertEqual(t, big.NewInt(0xf), bi.Value(2).(BinaryString).Int())
 	bi = newFromString([]string{"1111", strings.Repeat("0", wordBitsize+1), "111"})
 	assertEqual(t, "1111"+strings.Repeat("0", wordBitsize+1)+"111", bi.String())
@@ -35,7 +35,7 @@ func TestNewFromString(t *testing.T) {
 	assertEqual(t, []big.Word{0xf << uint(wordBitsize-4), 0x7}, bi.representation.(*bs).w)
 	assertEqual(t, []int{0, 4, wordBitsize + 5}, bi.starts)
 	assertEqual(t, big.NewInt(0xf), bi.Value(0).(BinaryString).Int())
-	assertEqual(t, big.NewInt(0), bi.Value(1).(BinaryString).Int())
+	assertEqual(t, big.NewInt(0).Bytes(), bi.Value(1).(BinaryString).Int().Bytes())
 	assertEqual(t, big.NewInt(0x7), bi.Value(2).(BinaryString).Int())
 	bi = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize) + "1", "011"})
 	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize)+"1011", bi.String())
@@ -112,7 +112,8 @@ func TestClone(t *testing.T) {
 func TestAsBigInt(t *testing.T) {
 	assertEqual(t, "1", fmt.Sprintf("%b", newFromString([]string{"1"}).representation.Int()))
 	assertEqual(t, "1"+strings.Repeat("0", wordBitsize),
-		fmt.Sprintf("%b", newFromString([]string{"1" + strings.Repeat("0", wordBitsize)}).representation.Int()))
+		fmt.Sprintf("%b",
+			newFromString([]string{"1" + strings.Repeat("0", wordBitsize)}).representation.Int()))
 }
 
 func TestNewFromBigInt(t *testing.T) {
