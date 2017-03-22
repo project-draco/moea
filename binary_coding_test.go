@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewFromString(t *testing.T) {
-	bi := newFromString([]string{"11", "0000", "111"})
+	bi := newFromString([]string{"11", "0000", "111"}, nil)
 	assertEqual(t, "110000111", bi.String())
 	assertEqual(t, 9, bi.totalLen)
 	assertEqual(t, []int{2, 4, 3}, bi.lengths)
@@ -19,7 +19,7 @@ func TestNewFromString(t *testing.T) {
 	assertEqual(t, big.NewInt(3), bi.Value(0).(BinaryString).Int())
 	assertEqual(t, big.NewInt(0).Bytes(), bi.Value(1).(BinaryString).Int().Bytes())
 	assertEqual(t, big.NewInt(7), bi.Value(2).(BinaryString).Int())
-	bi = newFromString([]string{"1111", strings.Repeat("0", wordBitsize), "1111"})
+	bi = newFromString([]string{"1111", strings.Repeat("0", wordBitsize), "1111"}, nil)
 	assertEqual(t, "1111"+strings.Repeat("0", wordBitsize)+"1111", bi.String())
 	assertEqual(t, wordBitsize+8, bi.totalLen)
 	assertEqual(t, []int{4, wordBitsize, 4}, bi.lengths)
@@ -28,7 +28,7 @@ func TestNewFromString(t *testing.T) {
 	assertEqual(t, big.NewInt(0xf), bi.Value(0).(BinaryString).Int())
 	assertEqual(t, big.NewInt(0).Bytes(), bi.Value(1).(BinaryString).Int().Bytes())
 	assertEqual(t, big.NewInt(0xf), bi.Value(2).(BinaryString).Int())
-	bi = newFromString([]string{"1111", strings.Repeat("0", wordBitsize+1), "111"})
+	bi = newFromString([]string{"1111", strings.Repeat("0", wordBitsize+1), "111"}, nil)
 	assertEqual(t, "1111"+strings.Repeat("0", wordBitsize+1)+"111", bi.String())
 	assertEqual(t, wordBitsize+8, bi.totalLen)
 	assertEqual(t, []int{4, wordBitsize + 1, 3}, bi.lengths)
@@ -37,7 +37,7 @@ func TestNewFromString(t *testing.T) {
 	assertEqual(t, big.NewInt(0xf), bi.Value(0).(BinaryString).Int())
 	assertEqual(t, big.NewInt(0).Bytes(), bi.Value(1).(BinaryString).Int().Bytes())
 	assertEqual(t, big.NewInt(0x7), bi.Value(2).(BinaryString).Int())
-	bi = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize) + "1", "011"})
+	bi = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize) + "1", "011"}, nil)
 	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize)+"1011", bi.String())
 	assertEqual(t, wordBitsize+9, bi.totalLen)
 	assertEqual(t, []int{4, wordBitsize + 2, 3}, bi.lengths)
@@ -49,7 +49,7 @@ func TestNewFromString(t *testing.T) {
 	assertEqual(t, big.NewInt(0xe), bi.Value(0).(BinaryString).Int())
 	assertEqual(t, i, bi.Value(1).(BinaryString).Int())
 	assertEqual(t, big.NewInt(3), bi.Value(2).(BinaryString).Int())
-	bi = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"})
+	bi = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"}, nil)
 	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-2)+"111011", bi.String())
 	assertEqual(t, wordBitsize+9, bi.totalLen)
 	assertEqual(t, []int{4, wordBitsize + 2, 3}, bi.lengths)
@@ -64,15 +64,15 @@ func TestNewFromString(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
-	i1 := newFromString([]string{"1111"})
-	i2 := newFromString([]string{"0000"})
+	i1 := newFromString([]string{"1111"}, nil)
+	i2 := newFromString([]string{"0000"}, nil)
 	i1.Copy(i2, 2, 4)
 	assertEqual(t, "1100", i1.String())
 	i1.Copy(i2, 0, 4)
 	assertEqual(t, "0000", i1.String())
-	i0 := newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"})
-	i1 = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"})
-	i2 = newFromString([]string{"1110", "0" + strings.Repeat("1", wordBitsize-2) + "011", "011"})
+	i0 := newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"}, nil)
+	i1 = newFromString([]string{"1110", "1" + strings.Repeat("0", wordBitsize-2) + "111", "011"}, nil)
+	i2 = newFromString([]string{"1110", "0" + strings.Repeat("1", wordBitsize-2) + "011", "011"}, nil)
 	i1.Copy(i2, 5, 6)
 	assertEqual(t, "111011"+strings.Repeat("0", wordBitsize-3)+"111011", i1.String())
 	i1.Copy(i0, 0, i1.Len())
@@ -81,17 +81,17 @@ func TestCopy(t *testing.T) {
 	i1.Copy(i0, 0, i1.Len())
 	i1.Copy(i2, wordBitsize, wordBitsize+1)
 	assertEqual(t, "11101"+strings.Repeat("0", wordBitsize-5)+"100111011", i1.String())
-	i1 = newFromString([]string{strings.Repeat("0", wordBitsize*3+8)})
-	i2 = newFromString([]string{strings.Repeat("1", wordBitsize*3+8)})
+	i1 = newFromString([]string{strings.Repeat("0", wordBitsize*3+8)}, nil)
+	i2 = newFromString([]string{strings.Repeat("1", wordBitsize*3+8)}, nil)
 	i1.Copy(i2, 0, wordBitsize*3+8)
 	assertEqual(t, strings.Repeat("1", wordBitsize*3+8), i1.String())
 }
 
 func TestMutate(t *testing.T) {
-	i := newFromString([]string{"0000"})
+	i := newFromString([]string{"0000"}, nil)
 	i.Mutate([]int{2})
 	assertEqual(t, "0010", i.String())
-	i = newFromString([]string{strings.Repeat("0", wordBitsize*3+8)})
+	i = newFromString([]string{strings.Repeat("0", wordBitsize*3+8)}, nil)
 	m := []int{}
 	for i := 0; i < wordBitsize*3+8; i++ {
 		m = append(m, i)
@@ -110,10 +110,10 @@ func TestClone(t *testing.T) {
 }
 
 func TestAsBigInt(t *testing.T) {
-	assertEqual(t, "1", fmt.Sprintf("%b", newFromString([]string{"1"}).representation.Int()))
+	assertEqual(t, "1", fmt.Sprintf("%b", newFromString([]string{"1"}, nil).representation.Int()))
 	assertEqual(t, "1"+strings.Repeat("0", wordBitsize),
 		fmt.Sprintf("%b",
-			newFromString([]string{"1" + strings.Repeat("0", wordBitsize)}).representation.Int()))
+			newFromString([]string{"1" + strings.Repeat("0", wordBitsize)}, nil).representation.Int()))
 }
 
 func TestNewFromBigInt(t *testing.T) {
@@ -125,7 +125,7 @@ func TestNewFromBigInt(t *testing.T) {
 
 func TestBinaryString(t *testing.T) {
 	s := strings.Repeat("1", wordBitsize*3+8)
-	bi := newFromString([]string{s})
+	bi := newFromString([]string{s}, nil)
 	count := 0
 	var w, j int
 	it := bi.Value(0).(BinaryString).Iterator(&w, &j)
@@ -154,6 +154,19 @@ func TestBinaryString(t *testing.T) {
 	assertEqual(t, strings.Repeat("0", wordBitsize*3+8), bi.Value(0).(BinaryString).String())
 }
 
+func TestLimit(t *testing.T) {
+	bi := newFromString([]string{"11"}, []Bound{{"0", "10"}})
+	assertEqual(t, "10", bi.Value(0).(BinaryString).String())
+	bi = newFromString([]string{"11", "00"}, []Bound{{"1", "10"}, {"1", "10"}})
+	assertEqual(t, "10", bi.Value(0).(BinaryString).String())
+	assertEqual(t, "01", bi.Value(1).(BinaryString).String())
+	bi = newFromString([]string{strings.Repeat("1", wordBitsize+2)},
+		[]Bound{{"0", strings.Repeat("1", wordBitsize+1)}})
+	s := bi.Value(0).(BinaryString).String()
+	assertEqual(t, strings.Repeat("1", wordBitsize+1), s[1:])
+	assertEqual(t, "0", s[0:1])
+}
+
 func assertEqual(t *testing.T, expected, value interface{}) {
 	if !reflect.DeepEqual(expected, value) {
 		reportError(t, "", expected, value)
@@ -170,7 +183,7 @@ func reportError(t *testing.T, mod string, expected, value interface{}) {
 	s1 := fmt.Sprintf("%v", expected)
 	s2 := fmt.Sprintf("%v", value)
 	if len(s1) > 50 || len(s2) > 50 {
-		t.Errorf("%sexpected\n%v\nbut was\n%v", mod, s1, s2)
+		t.Errorf("%sexpected\n%v\nbut was\n%v %d %d", mod, s1, s2, len(s1), len(s2))
 	} else {
 		t.Errorf("%sexpected %v but was %v", mod, s1, s2)
 	}

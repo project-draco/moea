@@ -33,7 +33,7 @@ type Bound struct {
 
 type mapping struct {
 	min   *big.Int
-	coeff *big.Float
+	coeff *big.Rat
 }
 
 const wordBitsize = int(8 * unsafe.Sizeof(big.Word(0)))
@@ -54,25 +54,7 @@ func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng RNG)
 	}
 	var mappings []mapping
 	if bounds != nil {
-		mappings = make([]mapping, len(bounds))
-		for i, b := range bounds {
-			min, ok1 := new(big.Int).SetString(b.Min, 2)
-			max, ok2 := new(big.Int).SetString(b.Max, 2)
-			if !ok1 || !ok2 {
-				panic("Invalid bounds")
-			}
-			interval := new(big.Int)
-			interval.Set(max)
-			interval.Sub(interval, min)
-			fullscale := new(big.Int)
-			fullscale.Exp(big.NewInt(2), big.NewInt(int64(lengths[i])), nil)
-			fullscale.Sub(fullscale, big.NewInt(1))
-			fullscaleAsFloat := new(big.Float).SetInt(fullscale)
-			coeff := new(big.Float)
-			coeff.SetInt(interval)
-			coeff.Quo(coeff, fullscaleAsFloat)
-			mappings[i] = mapping{min, coeff}
-		}
+		mappings = mappingsFromBounds(bounds, lengths)
 	}
 	individualSize := totalLen / wordBitsize
 	if totalLen%wordBitsize > 0 {
@@ -178,6 +160,29 @@ func randomize(representation BinaryString, rng RNG) {
 	}
 }
 
+func mappingsFromBounds(bounds []Bound, lengths []int) []mapping {
+	result := make([]mapping, len(bounds))
+	for i, b := range bounds {
+		min, ok1 := new(big.Int).SetString(b.Min, 2)
+		max, ok2 := new(big.Int).SetString(b.Max, 2)
+		if !ok1 || !ok2 {
+			panic("Invalid bounds")
+		}
+		interval := new(big.Int)
+		interval.Set(max)
+		interval.Sub(interval, min)
+		fullscale := new(big.Int)
+		fullscale.Exp(big.NewInt(2), big.NewInt(int64(lengths[i])), nil)
+		fullscale.Sub(fullscale, big.NewInt(1))
+		fullscaleAsRat := new(big.Rat).SetInt(fullscale)
+		coeff := new(big.Rat)
+		coeff.SetInt(interval)
+		coeff.Quo(coeff, fullscaleAsRat)
+		result[i] = mapping{min, coeff}
+	}
+	return result
+}
+
 func (r *binaryIndividual) Len() int {
 	return r.totalLen
 }
@@ -186,8 +191,31 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 	if r.variablesInitialized {
 		return r.variables[idx]
 	}
+	var f *big.Rat
 	for i := 0; i < len(r.variables); i++ {
 		r.representation.Slice(r.starts[i], r.starts[i]+r.lengths[i], r.variables[i])
+		if r.mappings != nil {
+			if f == nil {
+				f = new(big.Rat)
+			}
+			bigint := r.variables[i].Int()
+			f.SetInt(bigint)
+			f = f.Mul(f, r.mappings[i].coeff)
+			bigint = bigint.Add(f.Num(), r.mappings[i].min)
+			if len(r.variables[i].w) > 1 {
+				rmd := r.lengths[i] % wordBitsize
+				w0 := bigint.Bits()[0]
+				w0 = (w0 << uint(wordBitsize-rmd)) >> uint(wordBitsize-rmd)
+				bigint = bigint.Rsh(bigint, uint(rmd))
+				bigbits := bigint.Bits()
+				for j := 0; j < len(r.variables[i].w)-1; j++ {
+					r.variables[i].w[j] = bigbits[len(bigbits)-1-j]
+				}
+				r.variables[i].w[len(r.variables[i].w)-1] = w0
+			} else {
+				r.variables[i].w[0] = bigint.Bits()[0]
+			}
+		}
 	}
 	r.variablesInitialized = true
 	return r.variables[idx]
@@ -215,10 +243,10 @@ func newFromBigInts(ints []*big.Int) *binaryIndividual {
 	for i, ii := range ints {
 		strings[i] = fmt.Sprintf("%b", ii)
 	}
-	return newFromString(strings)
+	return newFromString(strings, nil)
 }
 
-func newFromString(s []string) *binaryIndividual {
+func newFromString(s []string, bounds []Bound) *binaryIndividual {
 	l := 0
 	for _, each := range s {
 		l += len(each)
@@ -243,6 +271,9 @@ func newFromString(s []string) *binaryIndividual {
 	for i := 0; i < len(bi.variables); i++ {
 		bi.variables[i] = newBinString(bi.lengths[i], vars[v:v+bi.variableWordCount[i]], nil, nil)
 		v += bi.variableWordCount[i]
+	}
+	if bounds != nil {
+		bi.mappings = mappingsFromBounds(bounds, bi.lengths)
 	}
 	return bi
 }

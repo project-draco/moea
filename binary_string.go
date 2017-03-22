@@ -249,6 +249,7 @@ func (b *bs) SetString(s string) {
 		start += wordBitsize
 		i++
 	}
+	b.l = len(s)
 }
 
 func (b *bsi) setPosition(i int, w, j *int) {
