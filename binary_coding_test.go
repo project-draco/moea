@@ -160,6 +160,8 @@ func TestLimit(t *testing.T) {
 	bi = newFromString([]string{"11", "00"}, []Bound{{"1", "10"}, {"1", "10"}})
 	assertEqual(t, "10", bi.Value(0).(BinaryString).String())
 	assertEqual(t, "01", bi.Value(1).(BinaryString).String())
+	bi = newFromString([]string{"10"}, []Bound{{"0", "10"}})
+	assertEqual(t, "01", bi.Value(0).(BinaryString).String())
 	bi = newFromString([]string{strings.Repeat("1", wordBitsize+2)},
 		[]Bound{{"0", strings.Repeat("1", wordBitsize+1)}})
 	s := bi.Value(0).(BinaryString).String()
