@@ -57,7 +57,7 @@ func main() {
 		config := &moea.Config{
 			Algorithm: moea.NewSimpleAlgorithm(10),
 			Population: moea.NewRandomBinaryPopulation(300, []int{200},
-				[]moea.Bound{{strings.Repeat("0", 199), strings.Repeat("1", 100)}}, rng),
+				[]moea.Bound{{strings.Repeat("0", 200), strings.Repeat("1", 100)}}, rng),
 			// Population:           moea.NewRandomBooleanPopulation(300, []int{200}),
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,
@@ -70,7 +70,7 @@ func main() {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		// fmt.Println(result, objective)
+		// fmt.Println(result.Value(0), objective)
 	}
 	var numCPU = runtime.GOMAXPROCS(0)
 	c := make(chan int, numCPU)

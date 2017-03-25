@@ -199,15 +199,10 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 				f = new(big.Rat)
 			}
 			bigint := r.variables[i].Int()
-			f.SetInt(bigint)
-			f = f.Mul(f, r.mappings[i].coeff)
-			if f.Denom().BitLen() == 1 {
-				bigint = f.Num()
-			} else {
-				ff := new(big.Float).SetInt(f.Num())
-				ff = ff.Quo(ff, new(big.Float).SetInt(f.Denom()))
-				ff.Int(bigint)
+			if r.mappings[i].coeff.Num().BitLen() != 1 {
+				bigint.Mul(bigint, r.mappings[i].coeff.Num())
 			}
+			bigint.Quo(bigint, r.mappings[i].coeff.Denom())
 			bigint = bigint.Add(bigint, r.mappings[i].min)
 			if len(r.variables[i].w) > 1 {
 				rmd := r.lengths[i] % wordBitsize
