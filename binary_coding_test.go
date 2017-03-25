@@ -167,6 +167,11 @@ func TestLimit(t *testing.T) {
 	s := bi.Value(0).(BinaryString).String()
 	assertEqual(t, strings.Repeat("1", wordBitsize+1), s[1:])
 	assertEqual(t, "0", s[0:1])
+	bi = newFromString([]string{strings.Repeat("1", 200)},
+		[]Bound{{"0", strings.Repeat("1", 100)}})
+	s = bi.Value(0).(BinaryString).String()
+	assertEqual(t, strings.Repeat("1", 100), s[100:])
+	assertEqual(t, strings.Repeat("0", 100), s[0:100])
 }
 
 func assertEqual(t *testing.T, expected, value interface{}) {
@@ -185,7 +190,7 @@ func reportError(t *testing.T, mod string, expected, value interface{}) {
 	s1 := fmt.Sprintf("%v", expected)
 	s2 := fmt.Sprintf("%v", value)
 	if len(s1) > 50 || len(s2) > 50 {
-		t.Errorf("%sexpected\n%v\nbut was\n%v %d %d", mod, s1, s2, len(s1), len(s2))
+		t.Errorf("%sexpected\n%v\nbut was\n%v", mod, s1, s2)
 	} else {
 		t.Errorf("%sexpected %v but was %v", mod, s1, s2)
 	}

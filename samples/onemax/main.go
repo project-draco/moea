@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"project-draco.io/moea"
@@ -54,8 +55,9 @@ func main() {
 	f := func(seed uint32) {
 		rng := moea.NewXorshiftWithSeed(seed)
 		config := &moea.Config{
-			Algorithm:  moea.NewSimpleAlgorithm(10),
-			Population: moea.NewRandomBinaryPopulation(300, []int{200}, nil, rng),
+			Algorithm: moea.NewSimpleAlgorithm(10),
+			Population: moea.NewRandomBinaryPopulation(300, []int{200},
+				[]moea.Bound{{strings.Repeat("0", 199), strings.Repeat("1", 100)}}, rng),
 			// Population:           moea.NewRandomBooleanPopulation(300, []int{200}),
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,

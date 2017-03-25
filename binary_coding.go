@@ -201,7 +201,7 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 			bigint := r.variables[i].Int()
 			f.SetInt(bigint)
 			f = f.Mul(f, r.mappings[i].coeff)
-			if f.Denom().Int64() == 1 {
+			if f.Denom().BitLen() == 1 {
 				bigint = f.Num()
 			} else {
 				ff := new(big.Float).SetInt(f.Num())
@@ -211,14 +211,23 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 			bigint = bigint.Add(bigint, r.mappings[i].min)
 			if len(r.variables[i].w) > 1 {
 				rmd := r.lengths[i] % wordBitsize
-				w0 := bigint.Bits()[0]
-				w0 = (w0 << uint(wordBitsize-rmd)) >> uint(wordBitsize-rmd)
+				b0 := bigint.Bits()[0]
+				b0 = (b0 << uint(wordBitsize-rmd)) >> uint(wordBitsize-rmd)
 				bigint = bigint.Rsh(bigint, uint(rmd))
 				bigbits := bigint.Bits()
-				for j := 0; j < len(r.variables[i].w)-1; j++ {
-					r.variables[i].w[j] = bigbits[len(bigbits)-1-j]
+				ll := len(r.variables[i].w) - len(bigbits)
+				if rmd > 0 && ll > 0 {
+					ll--
 				}
-				r.variables[i].w[len(r.variables[i].w)-1] = w0
+				for j := ll; j < len(r.variables[i].w)-1; j++ {
+					r.variables[i].w[j] = bigbits[len(bigbits)-1-j+ll]
+				}
+				for j := 0; j < ll; j++ {
+					r.variables[i].w[j] = 0
+				}
+				if rmd > 0 {
+					r.variables[i].w[len(r.variables[i].w)-1] = b0
+				}
 			} else {
 				r.variables[i].w[0] = bigint.Bits()[0]
 			}

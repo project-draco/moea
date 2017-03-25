@@ -98,7 +98,7 @@ func (b *bs) Int() *big.Int {
 		b.bigbits[len(b.w)-2-i] = b.w[i]
 	}
 	if len(b.w) > 1 {
-		b.bigint.SetBits(b.bigbits)
+		b.bigint.SetBits(b.bigbits[0 : len(b.w)-1])
 		b.bigint = b.bigint.Lsh(b.bigint, uint(b.l%wordBitsize))
 		b.bigbits = b.bigint.Bits()
 	}
