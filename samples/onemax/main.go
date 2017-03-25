@@ -65,12 +65,12 @@ func main() {
 			MutationProbability:   1.0 / 200,
 			RandomNumberGenerator: rng,
 		}
-		_, _, err := moea.Run(config)
-		// result, objective, err := moea.Run(config)
+		// _, _, err := moea.Run(config)
+		result, objective, err := moea.Run(config)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		// fmt.Println(result.Value(0), objective)
+		fmt.Println(result.Value(0), objective)
 	}
 	var numCPU = runtime.GOMAXPROCS(0)
 	c := make(chan int, numCPU)

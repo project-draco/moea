@@ -191,13 +191,9 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 	if r.variablesInitialized {
 		return r.variables[idx]
 	}
-	var f *big.Rat
 	for i := 0; i < len(r.variables); i++ {
 		r.representation.Slice(r.starts[i], r.starts[i]+r.lengths[i], r.variables[i])
 		if r.mappings != nil {
-			if f == nil {
-				f = new(big.Rat)
-			}
 			bigint := r.variables[i].Int()
 			if r.mappings[i].coeff.Num().BitLen() != 1 {
 				bigint.Mul(bigint, r.mappings[i].coeff.Num())
