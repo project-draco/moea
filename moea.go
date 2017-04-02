@@ -8,10 +8,11 @@ type Config struct {
 	CrossoverProbability  float64
 	MutationProbability   float64
 	RandomNumberGenerator RNG
+	OnGenerationFunc      OnGenerationFunc
 }
 
 type Algorithm interface {
-	Generation() (Individual, float64, error)
+	Generation() (*Result, error)
 	Initialize(*Config)
 }
 
@@ -31,19 +32,43 @@ type Individual interface {
 
 type ObjectiveFunc func(Individual) float64
 
-func Run(config *Config) (Individual, float64, error) {
+type OnGenerationFunc func(int, *Result)
+
+type Result struct {
+	BestIndividual   Individual
+	BestObjective    float64
+	WorstObjective   float64
+	AverageObjective float64
+	Mutations        int
+	Crossovers       int
+	Individuals      []IndividualResult
+}
+
+type IndividualResult struct {
+	Objective float64
+	Parent1   int
+	Parent2   int
+	CrossSite int
+}
+
+func Run(config *Config) (*Result, error) {
+	result := &Result{}
 	config.Algorithm.Initialize(config)
-	bestIndividualEver := config.Population.Individual(0).Clone()
-	bestObjectiveEver := 0.0
+	result.BestIndividual = config.Population.Individual(0).Clone()
 	for i := 0; i < config.MaxGenerations; i++ {
-		individual, objective, err := config.Algorithm.Generation()
+		generationResult, err := config.Algorithm.Generation()
 		if err != nil {
-			return nil, 0.0, err
+			return nil, err
 		}
-		if objective > bestObjectiveEver {
-			bestIndividualEver.Copy(individual, 0, bestIndividualEver.Len())
-			bestObjectiveEver = objective
+		if config.OnGenerationFunc != nil {
+			config.OnGenerationFunc(i, generationResult)
 		}
+		if generationResult.BestObjective > result.BestObjective {
+			result.BestIndividual.Copy(generationResult.BestIndividual, 0, result.BestIndividual.Len())
+			result.BestObjective = generationResult.BestObjective
+		}
+		result.Mutations += generationResult.Mutations
+		result.Crossovers += generationResult.Crossovers
 	}
-	return bestIndividualEver, bestObjectiveEver, nil
+	return result, nil
 }

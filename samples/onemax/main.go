@@ -52,7 +52,11 @@ func main() {
 		}
 		return result
 	}
-	f := func(seed uint32) {
+	var numCPU = runtime.GOMAXPROCS(0)
+	var result, generationResult []*moea.Result
+	result = make([]*moea.Result, numCPU)
+	generationResult = make([]*moea.Result, numCPU)
+	f := func(seed uint32, cpu int) {
 		rng := moea.NewXorshiftWithSeed(seed)
 		config := &moea.Config{
 			Algorithm: moea.NewSimpleAlgorithm(10),
@@ -64,20 +68,22 @@ func main() {
 			CrossoverProbability:  0.5,
 			MutationProbability:   1.0 / 200,
 			RandomNumberGenerator: rng,
+			OnGenerationFunc:      func(_ int, r *moea.Result) { generationResult[cpu] = r },
 		}
-		// _, _, err := moea.Run(config)
-		result, objective, err := moea.Run(config)
+		var err error
+		result[cpu], err = moea.Run(config)
+		// result, err := moea.Run(config)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		fmt.Println(result.Value(0), objective)
+		// fmt.Println(result.BestIndividual.Value(0), result.BestObjective)
 	}
-	var numCPU = runtime.GOMAXPROCS(0)
 	c := make(chan int, numCPU)
 	for i := 0; i < numCPU; i++ {
+		cpu := i
 		go func() {
 			for j := 0; j < 100/numCPU; j++ {
-				f(uint32(time.Now().UTC().UnixNano()))
+				f(uint32(time.Now().UTC().UnixNano()), cpu)
 			}
 			c <- 1
 		}()
@@ -85,4 +91,5 @@ func main() {
 	for i := 0; i < numCPU; i++ {
 		<-c
 	}
+	fmt.Println(result[0], generationResult[0])
 }
