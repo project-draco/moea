@@ -94,6 +94,9 @@ func (b *bs) Flip(i int) {
 }
 
 func (b *bs) Int() *big.Int {
+	for i := 0; i < len(b.bigbits); i++ {
+		b.bigbits[i] = 0
+	}
 	for i := 0; i < len(b.w)-1; i++ {
 		b.bigbits[len(b.w)-2-i] = b.w[i]
 	}
@@ -134,7 +137,10 @@ func (b *bs) String() string {
 func (b *bs) Slice(i, j int, dest BinaryString) {
 	start := i / wordBitsize
 	srmd := i % wordBitsize
-	end := j/wordBitsize + 1
+	end := j / wordBitsize
+	if j%wordBitsize != 0 {
+		end++
+	}
 	rr := dest.(*bs).w
 	for j := 0; j < end-start; j++ {
 		rr[j] = b.w[start+j] << uint(srmd)

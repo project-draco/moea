@@ -220,7 +220,12 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 					r.variables[i].w[len(r.variables[i].w)-1] = b0
 				}
 			} else {
-				r.variables[i].w[0] = bigint.Bits()[0]
+				bits := bigint.Bits()
+				if len(bits) == 0 {
+					r.variables[i].w[0] = 0
+				} else {
+					r.variables[i].w[0] = bits[0]
+				}
 			}
 		}
 	}
