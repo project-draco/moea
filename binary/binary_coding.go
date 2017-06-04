@@ -1,13 +1,15 @@
-package moea
+package binary
 
 import (
 	"fmt"
 	"math/big"
 	"unsafe"
+
+	"project-draco.io/moea"
 )
 
 type binaryPopulation struct {
-	individuals []Individual
+	individuals []moea.Individual
 	bi          []binaryIndividual
 	arr         []big.Word
 	vars        []big.Word
@@ -24,7 +26,7 @@ type binaryIndividual struct {
 	variableWordCount      []int
 	variableWordCountTotal int
 	variablesInitialized   bool
-	rng                    RNG
+	rng                    moea.RNG
 }
 
 type Bound struct {
@@ -38,7 +40,7 @@ type mapping struct {
 
 const wordBitsize = int(8 * unsafe.Sizeof(big.Word(0)))
 
-func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng RNG) Population {
+func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng moea.RNG) moea.Population {
 	totalLen := 0
 	starts := make([]int, len(lengths))
 	for i, l := range lengths {
@@ -61,7 +63,7 @@ func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng RNG)
 		individualSize++
 	}
 	result := &binaryPopulation{
-		make([]Individual, size),
+		make([]moea.Individual, size),
 		make([]binaryIndividual, size),
 		make([]big.Word, individualSize*size),
 		make([]big.Word, variableWordCountTotal*size)}
@@ -87,9 +89,9 @@ func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng RNG)
 
 func (p *binaryPopulation) Len() int { return len(p.individuals) }
 
-func (p *binaryPopulation) Individual(i int) Individual { return p.individuals[i] }
+func (p *binaryPopulation) Individual(i int) moea.Individual { return p.individuals[i] }
 
-func (p *binaryPopulation) Clone() Population {
+func (p *binaryPopulation) Clone() moea.Population {
 	if p.Len() == 0 {
 		return p
 	}
@@ -99,7 +101,7 @@ func (p *binaryPopulation) Clone() Population {
 		individualSize++
 	}
 	result := &binaryPopulation{
-		make([]Individual, p.Len()),
+		make([]moea.Individual, p.Len()),
 		make([]binaryIndividual, p.Len()),
 		make([]big.Word, individualSize*p.Len()),
 		make([]big.Word, first.variableWordCountTotal*p.Len())}
@@ -123,7 +125,7 @@ func (p *binaryPopulation) Clone() Population {
 	return result
 }
 
-func (r *binaryIndividual) Clone() Individual {
+func (r *binaryIndividual) Clone() moea.Individual {
 	result := NewRandomBinaryPopulation(1, r.lengths, r.bounds, r.rng).Individual(0)
 	result.Copy(r, 0, result.Len())
 	return result
@@ -146,7 +148,7 @@ func computeVariableWordCount(lengths []int) ([]int, int) {
 	return variableWordCount, variableWordCountTotal
 }
 
-func randomize(representation BinaryString, rng RNG) {
+func randomize(representation BinaryString, rng moea.RNG) {
 	var w, j int
 	it := representation.Iterator(&w, &j)
 	l := representation.Len()
@@ -233,7 +235,7 @@ func (r *binaryIndividual) Value(idx int) interface{} {
 	return r.variables[idx]
 }
 
-func (r *binaryIndividual) Copy(individual Individual, start, end int) {
+func (r *binaryIndividual) Copy(individual moea.Individual, start, end int) {
 	bi := individual.(*binaryIndividual)
 	r.representation.Copy(bi.representation, start, end)
 	r.variablesInitialized = false

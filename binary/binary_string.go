@@ -1,4 +1,4 @@
-package moea
+package binary
 
 import (
 	"fmt"

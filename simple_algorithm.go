@@ -66,7 +66,7 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 }
 
 func (a *simpleAlgorithm) rouletteWheelSelection() Individual {
-	r := a.config.RandomNumberGenerator.Float64() / float64(MaxUint32) * a.objectivesSum
+	r := a.config.RandomNumberGenerator.Float64() * a.objectivesSum
 	sum := 0.0
 	for i := 0; i < a.oldPopulation.Len(); i++ {
 		sum += a.oldObjectives[i]
@@ -80,8 +80,7 @@ func (a *simpleAlgorithm) rouletteWheelSelection() Individual {
 func (a *simpleAlgorithm) tournamentSelection() (Individual, int) {
 	result := -1
 	for i := 0; i < a.tournamentSize; i++ {
-		r := int(a.config.RandomNumberGenerator.Float64() /
-			float64(MaxUint32) * float64(a.oldPopulation.Len()))
+		r := int(a.config.RandomNumberGenerator.Float64() * float64(a.oldPopulation.Len()))
 		if result == -1 || a.oldObjectives[r] > a.oldObjectives[result] {
 			result = r
 		}
@@ -95,7 +94,7 @@ func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual)
 		child2.Copy(parent2, 0, child2.Len())
 		return -1
 	}
-	cross := 1 + int(a.config.RandomNumberGenerator.Float64()/float64(MaxUint32)*float64(parent1.Len()-2))
+	cross := 1 + int(a.config.RandomNumberGenerator.Float64()*float64(parent1.Len()-2))
 	child1.Copy(parent1, 0, cross)
 	child1.Copy(parent2, cross, child1.Len())
 	child2.Copy(parent2, 0, cross)

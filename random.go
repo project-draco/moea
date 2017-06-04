@@ -1,11 +1,10 @@
 package moea
 
-import "math/rand"
-
 type RNG interface {
 	Flip(probability float64) bool
 	FairFlip() bool
 	Float64() float64
+	Copy(seed int64) RNG
 }
 
 const (
@@ -39,7 +38,11 @@ func (s *Xorshift) FairFlip() bool {
 }
 
 func (s *Xorshift) Float64() float64 {
-	return float64(s.xorshift())
+	return float64(s.xorshift()) / float64(MaxUint32)
+}
+
+func (s *Xorshift) Copy(seed int64) RNG {
+	return NewXorshiftWithSeed(uint32(seed))
 }
 
 func (s *Xorshift) xorshift() uint32 {
@@ -49,8 +52,4 @@ func (s *Xorshift) xorshift() uint32 {
 	s.z = s.w
 	s.w = s.w ^ (s.w >> 19) ^ (s.t ^ (s.t >> 8))
 	return s.w
-}
-
-func flip(probability float64) bool {
-	return rand.Float64() < probability
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"project-draco.io/moea"
+	"project-draco.io/moea/binary"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -29,7 +30,7 @@ func main() {
 		}()
 	}
 	objectiveFunc := func(individual moea.Individual) float64 {
-		bs := individual.Value(0).(moea.BinaryString)
+		bs := individual.Value(0).(binary.BinaryString)
 		result := 0.0
 		var w, j int
 		it := bs.Iterator(&w, &j)
@@ -60,8 +61,8 @@ func main() {
 		rng := moea.NewXorshiftWithSeed(seed)
 		config := &moea.Config{
 			Algorithm: moea.NewSimpleAlgorithm(10),
-			Population: moea.NewRandomBinaryPopulation(300, []int{200},
-				[]moea.Bound{{strings.Repeat("0", 200), strings.Repeat("1", 100)}}, rng),
+			Population: binary.NewRandomBinaryPopulation(300, []int{200},
+				[]binary.Bound{{strings.Repeat("0", 200), strings.Repeat("1", 100)}}, rng),
 			// Population:           moea.NewRandomBooleanPopulation(300, []int{200}),
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,

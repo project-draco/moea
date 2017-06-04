@@ -1,4 +1,4 @@
-package moea
+package binary
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 	"runtime/debug"
 	"strings"
 	"testing"
+
+	"project-draco.io/moea"
 )
 
 func TestNewFromString(t *testing.T) {
@@ -101,7 +103,7 @@ func TestMutate(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
-	p := NewRandomBinaryPopulation(1, []int{wordBitsize*3 + 8}, nil, NewXorshift())
+	p := NewRandomBinaryPopulation(1, []int{wordBitsize*3 + 8}, nil, moea.NewXorshift())
 	c := p.Clone()
 	assertEqual(t, p.Individual(0).(fmt.Stringer).String(), c.Individual(0).(fmt.Stringer).String())
 	m := []int{0}

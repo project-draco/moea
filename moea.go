@@ -1,4 +1,5 @@
 package moea // import "project-draco.io/moea"
+import "runtime"
 
 type Config struct {
 	Algorithm             Algorithm
@@ -71,4 +72,35 @@ func Run(config *Config) (*Result, error) {
 		result.Crossovers += generationResult.Crossovers
 	}
 	return result, nil
+}
+
+func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
+	var numCPU = runtime.GOMAXPROCS(0)
+	bestResults := make([]*Result, numCPU)
+	c := make(chan int, numCPU)
+	for i := 0; i < numCPU; i++ {
+		cpu := i
+		go func() {
+			for j := 0; j < repeat/numCPU; j++ {
+				result, err := Run(configfunc())
+				if err != nil {
+					panic(err)
+				}
+				if bestResults[cpu] == nil || bestResults[cpu].BestObjective < result.BestObjective {
+					bestResults[cpu] = result
+				}
+			}
+			c <- 1
+		}()
+	}
+	for i := 0; i < numCPU; i++ {
+		<-c
+	}
+	var bestResult *Result
+	for i := 0; i < numCPU; i++ {
+		if bestResult == nil || bestResult.BestObjective < bestResults[i].BestObjective {
+			bestResult = bestResults[i]
+		}
+	}
+	return bestResult, nil
 }
