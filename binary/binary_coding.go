@@ -41,6 +41,9 @@ type mapping struct {
 const wordBitsize = int(8 * unsafe.Sizeof(big.Word(0)))
 
 func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng moea.RNG) moea.Population {
+	if size%2 == 1 {
+		size++
+	}
 	totalLen := 0
 	starts := make([]int, len(lengths))
 	for i, l := range lengths {

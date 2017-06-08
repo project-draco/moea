@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"runtime/debug"
 	"strings"
 	"testing"
 
@@ -176,6 +175,28 @@ func TestLimit(t *testing.T) {
 	assertEqual(t, strings.Repeat("0", 100), s[0:100])
 }
 
+func TestValueOfVariblesMultipleOfWordSize(t *testing.T) {
+	ss := make([]string, 32)
+	for i := 0; i < 32; i++ {
+		ss[i] = strings.Repeat("1", 4)
+	}
+	bi := newFromString(ss, nil)
+	for i := 0; i < 32; i++ {
+		assertEqual(t, big.NewInt(15), bi.Value(i).(BinaryString).Int())
+	}
+}
+
+func TestValueOverlapingWords(t *testing.T) {
+	ss := make([]string, 14)
+	for i := 0; i < 14; i++ {
+		ss[i] = strings.Repeat("1", 5)
+	}
+	bi := newFromString(ss, nil)
+	for i := 0; i < 14; i++ {
+		assertEqual(t, big.NewInt(31), bi.Value(i).(BinaryString).Int())
+	}
+}
+
 func assertEqual(t *testing.T, expected, value interface{}) {
 	if !reflect.DeepEqual(expected, value) {
 		reportError(t, "", expected, value)
@@ -196,5 +217,5 @@ func reportError(t *testing.T, mod string, expected, value interface{}) {
 	} else {
 		t.Errorf("%sexpected %v but was %v", mod, s1, s2)
 	}
-	debug.PrintStack()
+	// debug.PrintStack()
 }

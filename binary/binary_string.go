@@ -134,41 +134,41 @@ func (b *bs) String() string {
 	return result
 }
 
-func (b *bs) Slice(i, j int, dest BinaryString) {
-	start := i / wordBitsize
-	srmd := i % wordBitsize
-	end := j / wordBitsize
-	if j%wordBitsize != 0 {
-		end++
-	}
-	rr := dest.(*bs).w
-	for j := 0; j < end-start; j++ {
-		rr[j] = b.w[start+j] << uint(srmd)
-		if srmd > 0 && j < end-start-1 {
-			size := wordBitsize
-			if start+j+2 == len(b.w) && b.Len()%wordBitsize > 0 {
-				size = b.Len() % wordBitsize
+func (s *bs) Slice(i, j int, dest BinaryString) {
+	firstWord := i / wordBitsize
+	irmd := uint(i % wordBitsize)
+	lastWord := firstWord + (j-i-1)/wordBitsize + 1
+	destWords := dest.(*bs).w
+	for k := firstWord; k < lastWord; k++ {
+		destWords[k-firstWord] = (s.w[k] & (^big.Word(0) >> irmd)) << irmd
+		// if the source word was shifted then copy the remaining bits from next word
+		if irmd > 0 && k < len(s.w)-1 {
+			nextWord := s.w[k+1]
+			// if the next word is the last then shift it to fill a whole word
+			if k+2 == len(s.w) && s.Len()%wordBitsize > 0 {
+				nextWord <<= uint(wordBitsize - s.Len()%wordBitsize)
 			}
-			nextWord := b.w[start+j+1] >> uint(size-srmd)
-			rr[j] = setbits(rr[j], nextWord, 0, uint(srmd))
+			destWords[k-firstWord] += nextWord >> (uint(wordBitsize) - irmd)
 		}
 	}
 	size := wordBitsize
-	if end == len(b.w) && b.Len()%wordBitsize > 0 {
-		size = b.Len() % wordBitsize
+	if lastWord == len(s.w) && s.Len()%wordBitsize > 0 {
+		size = s.Len() % wordBitsize
 	}
-	rr[end-start-1] >>= uint(size - (j-i)%wordBitsize)
-	if end == len(b.w) && b.Len()%wordBitsize > 0 {
-		rr[end-start-1] &= ^big.Word(0) >> uint(wordBitsize-(j-i)%wordBitsize)
+	// fill with zeroes the left of last word
+	destWords[lastWord-firstWord-1] >>= uint(size - (j-i)%wordBitsize)
+	if lastWord == len(s.w) && s.Len()%wordBitsize > 0 {
+		destWords[lastWord-firstWord-1] &= ^big.Word(0) >> uint(wordBitsize-(j-i)%wordBitsize)
 	}
-	ll := (j - i) / wordBitsize
+	// discard unused words at the end
+	wordCount := (j - i) / wordBitsize
 	if (j-i)%wordBitsize > 0 {
-		ll++
+		wordCount++
 	}
-	if len(rr) > ll {
-		rr = rr[0 : len(rr)-1]
+	if len(destWords) > wordCount {
+		destWords = destWords[0 : len(destWords)-1]
 	}
-	dest.(*bs).w = rr
+	dest.(*bs).w = destWords
 }
 
 func (b *bs) Copy(other BinaryString, start, end int) {
