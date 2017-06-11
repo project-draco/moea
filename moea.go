@@ -75,6 +75,9 @@ func Run(config *Config) (*Result, error) {
 }
 
 func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
+	if repeat < 2 {
+		return Run(configfunc())
+	}
 	var numCPU = runtime.GOMAXPROCS(0)
 	bestResults := make([]*Result, numCPU)
 	c := make(chan int, numCPU)

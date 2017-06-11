@@ -1,5 +1,9 @@
 package moea
 
+import (
+	"math"
+)
+
 type simpleAlgorithm struct {
 	config               *Config
 	oldObjectives        []float64
@@ -35,19 +39,16 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		a.newObjectives[i] = f1
 		a.newObjectives[i+1] = f2
 		newObjectivesSum += f1 + f2
-		if f1 > a.result.BestObjective {
-			a.result.BestObjective = f1
-			a.result.BestIndividual = child1
+		if math.Max(f1, f2) > a.result.BestObjective {
+			a.result.BestObjective = math.Max(f1, f2)
+			if f1 > f2 {
+				a.result.BestIndividual = child1
+			} else {
+				a.result.BestIndividual = child2
+			}
 		}
-		if f2 > a.result.BestObjective {
-			a.result.BestObjective = f2
-			a.result.BestIndividual = child2
-		}
-		if f1 < a.result.WorstObjective {
-			a.result.WorstObjective = f1
-		}
-		if f2 < a.result.WorstObjective {
-			a.result.WorstObjective = f2
+		if math.Min(f1, f2) < a.result.WorstObjective {
+			a.result.WorstObjective = math.Min(f1, f2)
 		}
 		a.result.Individuals[i].Objective = f1
 		a.result.Individuals[i+1].Objective = f2
