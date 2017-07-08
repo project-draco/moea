@@ -262,6 +262,9 @@ func (b *bsi) setPosition(i int, w, j *int) {
 	*w = i / wordBitsize
 	if *w == len(b.w)-1 {
 		l := (b.l % wordBitsize)
+		if l == 0 {
+			l = wordBitsize
+		}
 		*j = l - i%l - 1
 	} else {
 		*j = wordBitsize - i%wordBitsize - 1
