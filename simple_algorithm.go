@@ -81,7 +81,7 @@ func (a *simpleAlgorithm) rouletteWheelSelection() Individual {
 func (a *simpleAlgorithm) tournamentSelection() (Individual, int) {
 	result := -1
 	for i := 0; i < a.tournamentSize; i++ {
-		r := int(a.config.RandomNumberGenerator.Float64() * float64(a.oldPopulation.Len()))
+		r := int(a.config.RandomNumberGenerator.Float64() * float64(a.oldPopulation.Len()-1))
 		if result == -1 || a.oldObjectives[r] > a.oldObjectives[result] {
 			result = r
 		}
