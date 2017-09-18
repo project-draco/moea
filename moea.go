@@ -4,6 +4,7 @@ import "runtime"
 type Config struct {
 	Algorithm             Algorithm
 	Population            Population
+	NumberOfObjectives    int
 	ObjectiveFunc         ObjectiveFunc
 	MaxGenerations        int
 	CrossoverProbability  float64
@@ -31,22 +32,22 @@ type Individual interface {
 	Clone() Individual
 }
 
-type ObjectiveFunc func(Individual) float64
+type ObjectiveFunc func(Individual) []float64
 
 type OnGenerationFunc func(int, *Result)
 
 type Result struct {
 	BestIndividual   Individual
-	BestObjective    float64
-	WorstObjective   float64
-	AverageObjective float64
+	BestObjective    []float64
+	WorstObjective   []float64
+	AverageObjective []float64
 	Mutations        int
 	Crossovers       int
 	Individuals      []IndividualResult
 }
 
 type IndividualResult struct {
-	Objective float64
+	Objective []float64
 	Parent1   int
 	Parent2   int
 	CrossSite int
@@ -56,6 +57,7 @@ func Run(config *Config) (*Result, error) {
 	result := &Result{}
 	config.Algorithm.Initialize(config)
 	result.BestIndividual = config.Population.Individual(0).Clone()
+	result.BestObjective = make([]float64, config.NumberOfObjectives)
 	for i := 0; i < config.MaxGenerations; i++ {
 		generationResult, err := config.Algorithm.Generation()
 		if err != nil {
@@ -64,9 +66,13 @@ func Run(config *Config) (*Result, error) {
 		if config.OnGenerationFunc != nil {
 			config.OnGenerationFunc(i, generationResult)
 		}
-		if generationResult.BestObjective > result.BestObjective {
-			result.BestIndividual.Copy(generationResult.BestIndividual, 0, result.BestIndividual.Len())
-			result.BestObjective = generationResult.BestObjective
+		for j := 0; j < config.NumberOfObjectives; j++ {
+			if generationResult.BestObjective[j] > result.BestObjective[j] {
+				if j == 0 {
+					result.BestIndividual.Copy(generationResult.BestIndividual, 0, result.BestIndividual.Len())
+				}
+				result.BestObjective[j] = generationResult.BestObjective[j]
+			}
 		}
 		result.Mutations += generationResult.Mutations
 		result.Crossovers += generationResult.Crossovers
@@ -89,7 +95,7 @@ func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
 				if err != nil {
 					panic(err)
 				}
-				if bestResults[cpu] == nil || bestResults[cpu].BestObjective < result.BestObjective {
+				if bestResults[cpu] == nil || bestResults[cpu].BestObjective[0] < result.BestObjective[0] {
 					bestResults[cpu] = result
 				}
 			}
@@ -101,7 +107,7 @@ func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
 	}
 	var bestResult *Result
 	for i := 0; i < numCPU; i++ {
-		if bestResult == nil || bestResult.BestObjective < bestResults[i].BestObjective {
+		if bestResult == nil || bestResult.BestObjective[0] < bestResults[i].BestObjective[0] {
 			bestResult = bestResults[i]
 		}
 	}

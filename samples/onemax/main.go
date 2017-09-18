@@ -27,26 +27,26 @@ func main() {
 			f.Close()
 		}()
 	}
-	objectiveFunc := func(individual moea.Individual) float64 {
+	objectiveFunc := func(individual moea.Individual) []float64 {
 		bs := individual.Value(0).(binary.BinaryString)
-		result := 0.0
+		result := []float64{0.0}
 		var w, j int
 		it := bs.Iterator(&w, &j)
 		l := individual.Len()
 		for i := 0; i < l; i++ {
 			it.Next(&w, &j)
 			if it.Test(w, j) {
-				result++
+				result[0]++
 			}
 		}
 		return result
 	}
-	_ /*objectiveFunc*/ = func(individual moea.Individual) float64 {
+	_ /*objectiveFunc*/ = func(individual moea.Individual) []float64 {
 		arr := individual.Value(0).([]bool)
-		result := 0.0
+		result := []float64{0.0}
 		for _, x := range arr {
 			if x {
-				result++
+				result[0]++
 			}
 		}
 		return result
@@ -58,6 +58,7 @@ func main() {
 			Population: binary.NewRandomBinaryPopulation(300, []int{200},
 				nil /*[]binary.Bound{{strings.Repeat("0", 200), strings.Repeat("1", 100)}}*/, rng),
 			// Population:           moea.NewRandomBooleanPopulation(300, []int{200}),
+			NumberOfObjectives:    1,
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,
 			CrossoverProbability:  0.5,

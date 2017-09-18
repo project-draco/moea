@@ -6,9 +6,9 @@ import (
 
 type simpleAlgorithm struct {
 	config               *Config
-	oldObjectives        []float64
-	newObjectives        []float64
-	objectivesSum        float64
+	oldObjectives        [][]float64
+	newObjectives        [][]float64
+	objectivesSum        []float64
 	oldPopulation        Population
 	newPopulation        Population
 	mutations            []bool
@@ -33,8 +33,18 @@ func NewSimpleAlgorithm(selectionOperator SelectionOperator) Algorithm {
 }
 
 func (a *simpleAlgorithm) Generation() (*Result, error) {
-	*a.result = Result{Individuals: a.result.Individuals}
-	newObjectivesSum := 0.0
+	*a.result = Result{
+		Individuals:      a.result.Individuals,
+		AverageObjective: a.result.AverageObjective,
+		WorstObjective:   a.result.WorstObjective,
+		BestObjective:    a.result.BestObjective,
+	}
+	for i := 0; i < a.config.NumberOfObjectives; i++ {
+		a.objectivesSum[i] = 0
+		a.result.AverageObjective[i] = 0
+		a.result.WorstObjective[i] = 0
+		a.result.BestObjective[i] = 0
+	}
 	for i := 0; i < a.newPopulation.Len(); i += 2 {
 		child1 := a.newPopulation.Individual(i)
 		child2 := a.newPopulation.Individual(i + 1)
@@ -47,17 +57,19 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		f2 := a.config.ObjectiveFunc(child2)
 		a.newObjectives[i] = f1
 		a.newObjectives[i+1] = f2
-		newObjectivesSum += f1 + f2
-		if math.Max(f1, f2) > a.result.BestObjective {
-			a.result.BestObjective = math.Max(f1, f2)
-			if f1 > f2 {
-				a.result.BestIndividual = child1
-			} else {
-				a.result.BestIndividual = child2
-			}
+		if f1[0] >= f2[0] && f1[0] > a.result.BestObjective[0] {
+			a.result.BestIndividual = child1
+		} else if f2[0] >= f1[0] && f2[0] > a.result.BestObjective[0] {
+			a.result.BestIndividual = child2
 		}
-		if math.Min(f1, f2) < a.result.WorstObjective {
-			a.result.WorstObjective = math.Min(f1, f2)
+		for j := 0; j < a.config.NumberOfObjectives; j++ {
+			a.objectivesSum[j] += f1[j] + f2[j]
+			if math.Max(f1[j], f2[j]) > a.result.BestObjective[j] {
+				a.result.BestObjective[j] = math.Max(f1[j], f2[j])
+			}
+			if math.Min(f1[j], f2[j]) < a.result.WorstObjective[j] {
+				a.result.WorstObjective[j] = math.Min(f1[j], f2[j])
+			}
 		}
 		a.result.Individuals[i].Objective = f1
 		a.result.Individuals[i+1].Objective = f2
@@ -69,17 +81,18 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		a.result.Individuals[i+1].CrossSite = crossSite
 	}
 	a.oldObjectives, a.newObjectives = a.newObjectives, a.oldObjectives
-	a.objectivesSum = newObjectivesSum
 	a.oldPopulation, a.newPopulation = a.newPopulation, a.oldPopulation
-	a.result.AverageObjective = newObjectivesSum / float64(a.newPopulation.Len())
+	for i := 0; i < a.config.NumberOfObjectives; i++ {
+		a.result.AverageObjective[i] = a.objectivesSum[i] / float64(a.newPopulation.Len())
+	}
 	return a.result, nil
 }
 
 func (_ RouletteWheelSelection) selection(a *simpleAlgorithm) (Individual, int) {
-	r := a.config.RandomNumberGenerator.Float64() * a.objectivesSum
+	r := a.config.RandomNumberGenerator.Float64() * a.objectivesSum[0]
 	sum := 0.0
 	for i := 0; i < a.oldPopulation.Len(); i++ {
-		sum += a.oldObjectives[i]
+		sum += a.oldObjectives[i][0]
 		if sum >= r {
 			return a.oldPopulation.Individual(i), i
 		}
@@ -91,7 +104,7 @@ func (ts TournamentSelection) selection(a *simpleAlgorithm) (Individual, int) {
 	result := -1
 	for i := 0; i < ts.TournamentSize; i++ {
 		r := int(a.config.RandomNumberGenerator.Float64() * float64(a.oldPopulation.Len()-1))
-		if result == -1 || a.oldObjectives[r] > a.oldObjectives[result] {
+		if result == -1 || a.oldObjectives[r][0] > a.oldObjectives[result][0] {
 			result = r
 		}
 	}
@@ -129,11 +142,14 @@ func (a *simpleAlgorithm) mutate(individual Individual) {
 
 func (a *simpleAlgorithm) Initialize(config *Config) {
 	a.config = config
-	a.oldObjectives = make([]float64, config.Population.Len())
-	a.newObjectives = make([]float64, config.Population.Len())
+	a.oldObjectives = make([][]float64, config.Population.Len())
+	a.newObjectives = make([][]float64, config.Population.Len())
+	a.objectivesSum = make([]float64, config.NumberOfObjectives)
 	for i := 0; i < config.Population.Len(); i++ {
 		a.oldObjectives[i] = a.config.ObjectiveFunc(config.Population.Individual(i))
-		a.objectivesSum += a.oldObjectives[i]
+		for j := 0; j < config.NumberOfObjectives; j++ {
+			a.objectivesSum[j] += a.oldObjectives[i][j]
+		}
 	}
 	a.oldPopulation = config.Population
 	a.newPopulation = config.Population.Clone()
@@ -141,5 +157,10 @@ func (a *simpleAlgorithm) Initialize(config *Config) {
 	a.mutationsIndexes = make([]int, a.oldPopulation.Individual(0).Len())
 	a.crossoverProbability = a.config.CrossoverProbability * float64(MaxUint32)
 	a.mutationProbability = a.config.MutationProbability * float64(MaxUint32)
-	a.result = &Result{Individuals: make([]IndividualResult, config.Population.Len())}
+	a.result = &Result{
+		Individuals:      make([]IndividualResult, config.Population.Len()),
+		AverageObjective: make([]float64, a.config.NumberOfObjectives),
+		WorstObjective:   make([]float64, a.config.NumberOfObjectives),
+		BestObjective:    make([]float64, a.config.NumberOfObjectives),
+	}
 }
