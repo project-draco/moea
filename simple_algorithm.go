@@ -13,14 +13,23 @@ type simpleAlgorithm struct {
 	newPopulation        Population
 	mutations            []bool
 	mutationsIndexes     []int
-	tournamentSize       int
+	selectionOperator    SelectionOperator
 	crossoverProbability float64
 	mutationProbability  float64
 	result               *Result
 }
 
-func NewSimpleAlgorithm(tournamentSize int) Algorithm {
-	return &simpleAlgorithm{tournamentSize: tournamentSize}
+type SelectionOperator interface {
+	selection(a *simpleAlgorithm) (Individual, int)
+}
+
+type RouletteWheelSelection struct{}
+
+type TournamentSelection struct{ TournamentSize int }
+
+func NewSimpleAlgorithm(selectionOperator SelectionOperator) Algorithm {
+	a := &simpleAlgorithm{selectionOperator: selectionOperator}
+	return a
 }
 
 func (a *simpleAlgorithm) Generation() (*Result, error) {
@@ -29,8 +38,8 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 	for i := 0; i < a.newPopulation.Len(); i += 2 {
 		child1 := a.newPopulation.Individual(i)
 		child2 := a.newPopulation.Individual(i + 1)
-		parent1, parentIndex1 := a.tournamentSelection()
-		parent2, parentIndex2 := a.tournamentSelection()
+		parent1, parentIndex1 := a.selectionOperator.selection(a)
+		parent2, parentIndex2 := a.selectionOperator.selection(a)
 		crossSite := a.crossover(parent1, parent2, child1, child2)
 		a.mutate(child1)
 		a.mutate(child2)
@@ -66,21 +75,21 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 	return a.result, nil
 }
 
-func (a *simpleAlgorithm) rouletteWheelSelection() Individual {
+func (_ RouletteWheelSelection) selection(a *simpleAlgorithm) (Individual, int) {
 	r := a.config.RandomNumberGenerator.Float64() * a.objectivesSum
 	sum := 0.0
 	for i := 0; i < a.oldPopulation.Len(); i++ {
 		sum += a.oldObjectives[i]
 		if sum >= r {
-			return a.oldPopulation.Individual(i)
+			return a.oldPopulation.Individual(i), i
 		}
 	}
-	return a.oldPopulation.Individual(a.oldPopulation.Len() - 1)
+	return a.oldPopulation.Individual(a.oldPopulation.Len() - 1), a.oldPopulation.Len() - 1
 }
 
-func (a *simpleAlgorithm) tournamentSelection() (Individual, int) {
+func (ts TournamentSelection) selection(a *simpleAlgorithm) (Individual, int) {
 	result := -1
-	for i := 0; i < a.tournamentSize; i++ {
+	for i := 0; i < ts.TournamentSize; i++ {
 		r := int(a.config.RandomNumberGenerator.Float64() * float64(a.oldPopulation.Len()-1))
 		if result == -1 || a.oldObjectives[r] > a.oldObjectives[result] {
 			result = r

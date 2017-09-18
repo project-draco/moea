@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 	"runtime/pprof"
-	"strings"
 	"time"
 
 	"project-draco.io/moea"
@@ -53,44 +51,24 @@ func main() {
 		}
 		return result
 	}
-	var numCPU = runtime.GOMAXPROCS(0)
-	var result, generationResult []*moea.Result
-	result = make([]*moea.Result, numCPU)
-	generationResult = make([]*moea.Result, numCPU)
-	f := func(seed uint32, cpu int) {
-		rng := moea.NewXorshiftWithSeed(seed)
-		config := &moea.Config{
-			Algorithm: moea.NewSimpleAlgorithm(10),
+	f := func() *moea.Config {
+		rng := moea.NewXorshiftWithSeed(uint32(time.Now().UTC().UnixNano()))
+		return &moea.Config{
+			Algorithm: moea.NewSimpleAlgorithm(moea.TournamentSelection{10}),
 			Population: binary.NewRandomBinaryPopulation(300, []int{200},
-				[]binary.Bound{{strings.Repeat("0", 200), strings.Repeat("1", 100)}}, rng),
+				nil /*[]binary.Bound{{strings.Repeat("0", 200), strings.Repeat("1", 100)}}*/, rng),
 			// Population:           moea.NewRandomBooleanPopulation(300, []int{200}),
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,
 			CrossoverProbability:  0.5,
 			MutationProbability:   1.0 / 200,
 			RandomNumberGenerator: rng,
-			OnGenerationFunc:      func(_ int, r *moea.Result) { generationResult[cpu] = r },
+			OnGenerationFunc:      func(_ int, r *moea.Result) {},
 		}
-		var err error
-		result[cpu], err = moea.Run(config)
-		// result, err := moea.Run(config)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		// fmt.Println(result.BestIndividual.Value(0), result.BestObjective)
 	}
-	c := make(chan int, numCPU)
-	for i := 0; i < numCPU; i++ {
-		cpu := i
-		go func() {
-			for j := 0; j < 100/numCPU; j++ {
-				f(uint32(time.Now().UTC().UnixNano()), cpu)
-			}
-			c <- 1
-		}()
+	result, err := moea.RunRepeatedly(f, 100)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 	}
-	for i := 0; i < numCPU; i++ {
-		<-c
-	}
-	fmt.Println(result[0], generationResult[0])
+	fmt.Println(result.BestIndividual, result.BestObjective)
 }
