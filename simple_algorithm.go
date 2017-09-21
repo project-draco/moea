@@ -20,10 +20,10 @@ type simpleAlgorithm struct {
 }
 
 type SelectionOperator interface {
-	selection(a *simpleAlgorithm) (Individual, int)
+	selection(config *Config, objectives [][]float64) int
 }
 
-type RouletteWheelSelection struct{}
+type RouletteWheelSelection struct{ objectivesSum float64 }
 
 type TournamentSelection struct{ TournamentSize int }
 
@@ -45,11 +45,19 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		a.result.WorstObjective[i] = 0
 		a.result.BestObjective[i] = 0
 	}
+	type onGenerationListener interface {
+		onGeneration(*Config, [][]float64)
+	}
+	if l, ok := a.selectionOperator.(onGenerationListener); ok {
+		l.onGeneration(a.config, a.oldObjectives)
+	}
 	for i := 0; i < a.newPopulation.Len(); i += 2 {
 		child1 := a.newPopulation.Individual(i)
 		child2 := a.newPopulation.Individual(i + 1)
-		parent1, parentIndex1 := a.selectionOperator.selection(a)
-		parent2, parentIndex2 := a.selectionOperator.selection(a)
+		parentIndex1 := a.selectionOperator.selection(a.config, a.oldObjectives)
+		parentIndex2 := a.selectionOperator.selection(a.config, a.oldObjectives)
+		parent1 := a.oldPopulation.Individual(parentIndex1)
+		parent2 := a.oldPopulation.Individual(parentIndex2)
 		crossSite := a.crossover(parent1, parent2, child1, child2)
 		a.mutate(child1)
 		a.mutate(child2)
@@ -88,27 +96,34 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 	return a.result, nil
 }
 
-func (_ RouletteWheelSelection) selection(a *simpleAlgorithm) (Individual, int) {
-	r := a.config.RandomNumberGenerator.Float64() * a.objectivesSum[0]
-	sum := 0.0
-	for i := 0; i < a.oldPopulation.Len(); i++ {
-		sum += a.oldObjectives[i][0]
-		if sum >= r {
-			return a.oldPopulation.Individual(i), i
-		}
+func (rws RouletteWheelSelection) onGeneration(config *Config, objectives [][]float64) {
+	rws.objectivesSum = 0
+	for _, o := range objectives {
+		rws.objectivesSum += o[0]
 	}
-	return a.oldPopulation.Individual(a.oldPopulation.Len() - 1), a.oldPopulation.Len() - 1
 }
 
-func (ts TournamentSelection) selection(a *simpleAlgorithm) (Individual, int) {
+func (rws RouletteWheelSelection) selection(config *Config, objectives [][]float64) int {
+	r := config.RandomNumberGenerator.Float64() * rws.objectivesSum
+	sum := 0.0
+	for i := 0; i < config.Population.Len(); i++ {
+		sum += objectives[i][0]
+		if sum >= r {
+			return i
+		}
+	}
+	return config.Population.Len() - 1
+}
+
+func (ts TournamentSelection) selection(config *Config, objectives [][]float64) int {
 	result := -1
 	for i := 0; i < ts.TournamentSize; i++ {
-		r := int(a.config.RandomNumberGenerator.Float64() * float64(a.oldPopulation.Len()-1))
-		if result == -1 || a.oldObjectives[r][0] > a.oldObjectives[result][0] {
+		r := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
+		if result == -1 || objectives[r][0] > objectives[result][0] {
 			result = r
 		}
 	}
-	return a.oldPopulation.Individual(result), result
+	return result
 }
 
 func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual) int {
@@ -155,8 +170,8 @@ func (a *simpleAlgorithm) Initialize(config *Config) {
 	a.newPopulation = config.Population.Clone()
 	a.mutations = make([]bool, a.oldPopulation.Individual(0).Len())
 	a.mutationsIndexes = make([]int, a.oldPopulation.Individual(0).Len())
-	a.crossoverProbability = a.config.CrossoverProbability * float64(MaxUint32)
-	a.mutationProbability = a.config.MutationProbability * float64(MaxUint32)
+	a.crossoverProbability = a.config.CrossoverProbability
+	a.mutationProbability = a.config.MutationProbability
 	a.result = &Result{
 		Individuals:      make([]IndividualResult, config.Population.Len()),
 		AverageObjective: make([]float64, a.config.NumberOfObjectives),

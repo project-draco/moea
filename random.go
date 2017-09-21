@@ -4,12 +4,12 @@ type RNG interface {
 	Flip(probability float64) bool
 	FairFlip() bool
 	Float64() float64
-	Copy(seed int64) RNG
 }
 
 const (
-	MaxUint32     = ^uint32(0)
-	HalfMaxUint32 = MaxUint32 >> 1
+	MaxUint32        = ^uint32(0)
+	HalfMaxUint32    = MaxUint32 >> 1
+	MaxUint32AsFloat = float64(MaxUint32)
 )
 
 func NewXorshift() RNG {
@@ -30,19 +30,15 @@ type Xorshift struct {
 }
 
 func (s *Xorshift) Flip(probability float64) bool {
-	return s.xorshift() < uint32(probability)
+	return s.xorshift() < uint32(probability*MaxUint32AsFloat)
 }
 
 func (s *Xorshift) FairFlip() bool {
-	return s.Flip(float64(HalfMaxUint32))
+	return s.xorshift() < HalfMaxUint32
 }
 
 func (s *Xorshift) Float64() float64 {
-	return float64(s.xorshift()) / float64(MaxUint32)
-}
-
-func (s *Xorshift) Copy(seed int64) RNG {
-	return NewXorshiftWithSeed(uint32(seed))
+	return float64(s.xorshift()) / MaxUint32AsFloat
 }
 
 func (s *Xorshift) xorshift() uint32 {
