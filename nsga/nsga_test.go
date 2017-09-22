@@ -15,7 +15,7 @@ func TestNewFromString(t *testing.T) {
 	}
 	rng := MockRNG(0.5)
 	p := integer.NewRandomIntegerPopulation(2, 1, []integer.Bound{{0, 1}}, rng)
-	c := &moea.Config{Population: p, RandomNumberGenerator: rng, NumberOfObjectives: 1}
+	c := &moea.Config{Population: p, RandomNumberGenerator: rng}
 	ns.initialize(c)
 	ns.onGeneration(c, [][]float64{{0.5}, {1.0}})
 	if ns.selection(c, nil) != 1 {

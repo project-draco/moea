@@ -54,7 +54,7 @@ func (ns *NsgaSelection) onGeneration(config *moea.Config, objectives [][]float6
 					continue
 				} else {
 					flagobj := false
-					for k := 0; k < config.NumberOfObjectives; k++ {
+					for k := 0; k < len(objectives[i]); k++ {
 						if objectives[i][k] >= objectives[j][k] {
 							flagobj = true
 							break
