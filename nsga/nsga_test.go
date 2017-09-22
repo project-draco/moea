@@ -9,16 +9,28 @@ import (
 
 func TestNewFromString(t *testing.T) {
 	ns := &NsgaSelection{
-		Variables:   func(i int) []float64 { return []float64{1} },
+		Variables:   func(i int) []float64 { return []float64{float64(i)} },
 		LowerBounds: []float64{0},
 		UpperBounds: []float64{1},
 	}
-	rng := MockRNG(1.0)
+	rng := MockRNG(0.5)
 	p := integer.NewRandomIntegerPopulation(2, 1, []integer.Bound{{0, 1}}, rng)
-	c := &moea.Config{Population: p, RandomNumberGenerator: rng}
+	c := &moea.Config{Population: p, RandomNumberGenerator: rng, NumberOfObjectives: 1}
 	ns.initialize(c)
-	ns.onGeneration(c, [][]float64{{1.0}, {1.0}})
-	t.Log(ns)
+	ns.onGeneration(c, [][]float64{{0.5}, {1.0}})
+	if ns.selection(c, nil) != 1 {
+		t.Error("First selection must be 1")
+	}
+	if ns.selection(c, nil) != 0 {
+		t.Error("Second selection must be 0")
+	}
+	ns.onGeneration(c, [][]float64{{1.0}, {0.5}})
+	if ns.selection(c, nil) != 0 {
+		t.Error("First selection must be 1")
+	}
+	if ns.selection(c, nil) != 1 {
+		t.Error("Second selection must be 0")
+	}
 }
 
 type MockRNG float64

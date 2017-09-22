@@ -36,6 +36,10 @@ func (ns *NsgaSelection) initialize(config *moea.Config) {
 func (ns *NsgaSelection) onGeneration(config *moea.Config, objectives [][]float64) {
 	popcount := 0
 	frontindex := 1
+	for i := 0; i < config.Population.Len(); i++ {
+		ns.flag[i] = 0
+		ns.dumfitness[i] = 0.0
+	}
 	for popcount < config.Population.Len() {
 		for i := 0; i < config.Population.Len(); i++ {
 			if ns.flag[i] == 3 {
@@ -97,11 +101,11 @@ func (ns *NsgaSelection) onGeneration(config *moea.Config, objectives [][]float6
 			}
 		}
 	}
-	// ns.preselect(config)
+	ns.preselect(config)
 }
 
-func (ns *NsgaSelection) selection(config *moea.Config) int {
-	jpick := int(config.RandomNumberGenerator.Float64())
+func (ns *NsgaSelection) selection(config *moea.Config, _ [][]float64) int {
+	jpick := int(config.RandomNumberGenerator.Float64()) * ns.nremain
 	slect := ns.choices[jpick]
 	ns.choices[jpick] = ns.choices[ns.nremain]
 	ns.nremain--
