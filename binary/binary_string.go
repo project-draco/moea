@@ -273,5 +273,5 @@ func (b *bsi) setPosition(i int, w, j *int) {
 
 func setbits(destination, source big.Word, at, numbits uint) big.Word {
 	mask := big.Word(((^uint(0)) >> (uint(wordBitsize) - numbits)) << at)
-	return (destination &^ mask) | ((source << at) & mask)
+	return (destination &^ mask) | (source & mask)
 }
