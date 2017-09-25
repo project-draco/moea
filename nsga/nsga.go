@@ -7,21 +7,21 @@ import (
 )
 
 type NsgaSelection struct {
-	Variables   func(i int) []float64
-	LowerBounds []float64
-	UpperBounds []float64
-	Dshare      float64
-	front       []int
-	flag        []int
-	dumfitness  []float64
-	mindum      float64
-	deltadum    float64
-	choices     []int
-	fraction    []float64
-	nremain     int
+	ValuesAsFloat func(individual moea.Individual) []float64
+	LowerBounds   []float64
+	UpperBounds   []float64
+	Dshare        float64
+	front         []int
+	flag          []int
+	dumfitness    []float64
+	mindum        float64
+	deltadum      float64
+	choices       []int
+	fraction      []float64
+	nremain       int
 }
 
-func (ns *NsgaSelection) initialize(config *moea.Config) {
+func (ns *NsgaSelection) Initialize(config *moea.Config) {
 	ns.front = make([]int, config.Population.Len())
 	ns.flag = make([]int, config.Population.Len())
 	ns.dumfitness = make([]float64, config.Population.Len())
@@ -33,7 +33,7 @@ func (ns *NsgaSelection) initialize(config *moea.Config) {
 	}
 }
 
-func (ns *NsgaSelection) onGeneration(config *moea.Config, objectives [][]float64) {
+func (ns *NsgaSelection) OnGeneration(config *moea.Config, population moea.Population, objectives [][]float64) {
 	popcount := 0
 	frontindex := 1
 	for i := 0; i < config.Population.Len(); i++ {
@@ -90,7 +90,7 @@ func (ns *NsgaSelection) onGeneration(config *moea.Config, objectives [][]float6
 				}
 			}
 		}
-		ns.share(config)
+		ns.share(config, population)
 		ns.minimumdum(config)
 		frontindex++
 		for i := 0; i < config.Population.Len(); i++ {
@@ -104,8 +104,8 @@ func (ns *NsgaSelection) onGeneration(config *moea.Config, objectives [][]float6
 	ns.preselect(config)
 }
 
-func (ns *NsgaSelection) selection(config *moea.Config, _ [][]float64) int {
-	jpick := int(config.RandomNumberGenerator.Float64()) * ns.nremain
+func (ns *NsgaSelection) Selection(config *moea.Config, _ [][]float64) int {
+	jpick := int(config.RandomNumberGenerator.Float64()*float64(ns.nremain) + 1)
 	slect := ns.choices[jpick]
 	ns.choices[jpick] = ns.choices[ns.nremain]
 	ns.nremain--
@@ -136,7 +136,7 @@ func (ns *NsgaSelection) adjust(config *moea.Config, index int) {
 	ns.minimumdum(config)
 }
 
-func (ns *NsgaSelection) share(config *moea.Config) {
+func (ns *NsgaSelection) share(config *moea.Config, population moea.Population) {
 	for i := 0; i < config.Population.Len(); i++ {
 		nichecount := 1.0
 		if ns.flag[i] == 2 {
@@ -145,7 +145,7 @@ func (ns *NsgaSelection) share(config *moea.Config) {
 					continue
 				}
 				if ns.flag[j] == 2 {
-					d := ns.distance(i, j)
+					d := ns.distance(population.Individual(i), population.Individual(j))
 					if d < 0.0 {
 						d = (-1.0) * d
 					}
@@ -161,12 +161,12 @@ func (ns *NsgaSelection) share(config *moea.Config) {
 	}
 }
 
-func (ns *NsgaSelection) distance(i1, i2 int) float64 {
+func (ns *NsgaSelection) distance(i1, i2 moea.Individual) float64 {
 	sum := 0.0
-	v1 := ns.Variables(i1)
-	v2 := ns.Variables(i2)
+	v1 := ns.ValuesAsFloat(i1)
+	v2 := ns.ValuesAsFloat(i2)
 	for i := 0; i < len(v1); i++ {
-		sum += math.Sqrt(v1[i]-v2[i])/ns.UpperBounds[i] - ns.LowerBounds[i]
+		sum += square(v1[i]-v2[i]) / square(ns.UpperBounds[i]-ns.LowerBounds[i])
 	}
 	return math.Sqrt(sum)
 }
@@ -212,4 +212,8 @@ func (ns *NsgaSelection) preselect(config *moea.Config) {
 		}
 	}
 	ns.nremain = config.Population.Len() - 1
+}
+
+func square(x float64) float64 {
+	return x * x
 }

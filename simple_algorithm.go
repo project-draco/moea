@@ -20,7 +20,7 @@ type simpleAlgorithm struct {
 }
 
 type SelectionOperator interface {
-	selection(config *Config, objectives [][]float64) int
+	Selection(config *Config, objectives [][]float64) int
 }
 
 type RouletteWheelSelection struct{ objectivesSum float64 }
@@ -46,16 +46,16 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		a.result.BestObjective[i] = 0
 	}
 	type onGenerationListener interface {
-		onGeneration(*Config, [][]float64)
+		OnGeneration(*Config, Population, [][]float64)
 	}
 	if l, ok := a.selectionOperator.(onGenerationListener); ok {
-		l.onGeneration(a.config, a.oldObjectives)
+		l.OnGeneration(a.config, a.oldPopulation, a.oldObjectives)
 	}
 	for i := 0; i < a.newPopulation.Len(); i += 2 {
 		child1 := a.newPopulation.Individual(i)
 		child2 := a.newPopulation.Individual(i + 1)
-		parentIndex1 := a.selectionOperator.selection(a.config, a.oldObjectives)
-		parentIndex2 := a.selectionOperator.selection(a.config, a.oldObjectives)
+		parentIndex1 := a.selectionOperator.Selection(a.config, a.oldObjectives)
+		parentIndex2 := a.selectionOperator.Selection(a.config, a.oldObjectives)
 		parent1 := a.oldPopulation.Individual(parentIndex1)
 		parent2 := a.oldPopulation.Individual(parentIndex2)
 		crossSite := a.crossover(parent1, parent2, child1, child2)
@@ -87,6 +87,14 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		a.result.Individuals[i+1].Parent2 = parentIndex2
 		a.result.Individuals[i].CrossSite = crossSite
 		a.result.Individuals[i+1].CrossSite = crossSite
+		if a.result.Individuals[i].Values == nil {
+			a.result.Individuals[i].Values = make([]interface{}, a.config.NumberOfValues)
+			a.result.Individuals[i+1].Values = make([]interface{}, a.config.NumberOfValues)
+		}
+		for j := 0; j < a.config.NumberOfValues; j++ {
+			a.result.Individuals[i].Values[j] = child1.Value(j)
+			a.result.Individuals[i+1].Values[j] = child2.Value(j)
+		}
 	}
 	a.oldObjectives, a.newObjectives = a.newObjectives, a.oldObjectives
 	a.oldPopulation, a.newPopulation = a.newPopulation, a.oldPopulation
@@ -96,14 +104,14 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 	return a.result, nil
 }
 
-func (rws RouletteWheelSelection) onGeneration(config *Config, objectives [][]float64) {
+func (rws RouletteWheelSelection) OnGeneration(config *Config, objectives [][]float64) {
 	rws.objectivesSum = 0
 	for _, o := range objectives {
 		rws.objectivesSum += o[0]
 	}
 }
 
-func (rws RouletteWheelSelection) selection(config *Config, objectives [][]float64) int {
+func (rws RouletteWheelSelection) Selection(config *Config, objectives [][]float64) int {
 	r := config.RandomNumberGenerator.Float64() * rws.objectivesSum
 	sum := 0.0
 	for i := 0; i < config.Population.Len(); i++ {
@@ -115,7 +123,7 @@ func (rws RouletteWheelSelection) selection(config *Config, objectives [][]float
 	return config.Population.Len() - 1
 }
 
-func (ts TournamentSelection) selection(config *Config, objectives [][]float64) int {
+func (ts TournamentSelection) Selection(config *Config, objectives [][]float64) int {
 	result := -1
 	for i := 0; i < ts.TournamentSize; i++ {
 		r := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
@@ -177,5 +185,11 @@ func (a *simpleAlgorithm) Initialize(config *Config) {
 		AverageObjective: make([]float64, a.config.NumberOfObjectives),
 		WorstObjective:   make([]float64, a.config.NumberOfObjectives),
 		BestObjective:    make([]float64, a.config.NumberOfObjectives),
+	}
+	type initializer interface {
+		Initialize(*Config)
+	}
+	if i, ok := a.selectionOperator.(initializer); ok {
+		i.Initialize(a.config)
 	}
 }

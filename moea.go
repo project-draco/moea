@@ -4,6 +4,7 @@ import "runtime"
 type Config struct {
 	Algorithm             Algorithm
 	Population            Population
+	NumberOfValues        int
 	NumberOfObjectives    int
 	ObjectiveFunc         ObjectiveFunc
 	MaxGenerations        int
@@ -51,6 +52,7 @@ type IndividualResult struct {
 	Parent1   int
 	Parent2   int
 	CrossSite int
+	Values    []interface{}
 }
 
 func Run(config *Config) (*Result, error) {
@@ -76,6 +78,7 @@ func Run(config *Config) (*Result, error) {
 		}
 		result.Mutations += generationResult.Mutations
 		result.Crossovers += generationResult.Crossovers
+		result.Individuals = generationResult.Individuals
 	}
 	return result, nil
 }
