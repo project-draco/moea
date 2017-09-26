@@ -92,6 +92,12 @@ func TestCopy(t *testing.T) {
 	i3.Copy(i1, 0, 7)
 	i3.Copy(i2, 7, 32)
 	assertEqual(t, "01011101010010001100100101110111", i3.String())
+	i1 = newFromString([]string{"0111011010010000100001110011101100101001110110011001010101011101"}, nil)
+	i2 = newFromString([]string{"1010111010000110010111011001100010101100100110111011000100100100"}, nil)
+	i3 = newFromString([]string{strings.Repeat("0", 64)}, nil)
+	i3.Copy(i1, 0, 9)
+	i3.Copy(i2, 9, 64)
+	assertEqual(t, "0111011010000110010111011001100010101100100110111011000100100100", i3.String())
 }
 
 func TestMutate(t *testing.T) {

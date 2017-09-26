@@ -193,8 +193,10 @@ func (b *bs) Copy(other BinaryString, start, end int) {
 			ll := jj - ii
 			if i < len(b.w)-1 {
 				ii = wordBitsize - ii - ll
-			} else {
+			} else if b.l%wordBitsize > 0 {
 				ii = b.l%wordBitsize - ii - ll
+			} else {
+				ii = wordBitsize - ii - ll
 			}
 			b.w[i] = setbits(b.w[i], o.w[i], uint(ii), uint(ll))
 		}
