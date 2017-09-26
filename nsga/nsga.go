@@ -1,6 +1,7 @@
 package nsga
 
 import (
+	"fmt"
 	"math"
 
 	"project-draco.io/moea"
@@ -11,6 +12,7 @@ type NsgaSelection struct {
 	LowerBounds   []float64
 	UpperBounds   []float64
 	Dshare        float64
+	Verbose       bool
 	front         []int
 	flag          []int
 	dumfitness    []float64
@@ -100,6 +102,15 @@ func (ns *NsgaSelection) OnGeneration(config *moea.Config, population moea.Popul
 				ns.flag[i] = 0
 			}
 		}
+	}
+	if ns.Verbose {
+		count := 0
+		for i := 0; i < config.Population.Len(); i++ {
+			if ns.front[i] == 1 {
+				count++
+			}
+		}
+		fmt.Printf("Pareto front: %v\n", count)
 	}
 	ns.preselect(config)
 }
