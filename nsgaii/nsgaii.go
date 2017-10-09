@@ -160,63 +160,46 @@ func (n *NsgaIISelection) crowdingFill(objectives [][]float64, mixedPopulation, 
 }
 
 func (n *NsgaIISelection) fillNondominatedSort(config *moea.Config, objectives [][]float64, mixedPopulation, newPopulation moea.Population) {
-	n.pool = n.pool[:0]
+	pool := n.pool[:0]
 	for i := 0; i < mixedPopulation.Len(); i++ {
-		n.pool = append(n.pool, i)
+		pool = append(pool, i)
 	}
-	n.elite = n.elite[:0]
 	archieveSize := 0
 	rank := 1
 	i := 0
-	xxx := 0
-	for {
-		n.elite = append([]int{n.pool[0]}, n.elite...)
+	for archieveSize < config.Population.Len() {
+		elite := n.elite[0:1]
+		elite[0] = pool[0]
+		pool = pool[1:]
 		frontSize := 1
-		n.pool = n.pool[1:]
-		for {
-			if len(n.elite) == 0 {
-				break
-			}
+		for temp1 := 0; temp1 < len(pool); temp1++ {
 			var flag int
-			for {
-				end := false
-				fmt.Println(n.pool, n.elite, frontSize)
-				flag = n.checkDominance(objectives, n.pool[0], n.elite[0])
+			for temp2 := 0; temp2 < len(elite); temp2++ {
+				flag = n.checkDominance(objectives, pool[temp1], elite[temp2])
+				fmt.Println(flag, pool, temp1, elite, temp2, pool[temp1], elite[temp2])
 				if flag == 1 {
-					n.pool = append([]int{n.elite[0]}, n.pool...)
-					n.elite = n.elite[1:]
+					pool = insert(pool, elite[temp2])
+					elite = append(elite[0:temp2], elite[temp2+1:]...)
 					frontSize--
-				} else if flag == 0 {
-					n.elite = n.elite[1:]
 				} else if flag == -1 {
-					end = true
-				}
-				if end || len(n.elite) == 0 {
 					break
 				}
 			}
+			fmt.Println("***")
 			if flag == 0 || flag == 1 {
-				n.elite = append([]int{n.pool[0]}, n.elite...)
+				elite = insert(elite, pool[temp1])
 				frontSize++
-				n.pool = n.pool[1:]
+				pool = append(pool[0:temp1], pool[temp1+1:]...)
 			}
-			if len(n.pool) == 0 || xxx == 20 {
-				break
-			}
-			xxx++
 		}
 		j := i
-		if archieveSize-frontSize <= config.Population.Len() {
-			for {
-				individual := mixedPopulation.Individual(n.elite[0])
+		if archieveSize+frontSize <= config.Population.Len() {
+			for k := 0; k < len(elite); k++ {
+				individual := mixedPopulation.Individual(elite[k])
 				newPopulation.Individual(i).Copy(individual, 0, individual.Len())
 				n.rank[i] = rank
 				archieveSize++
-				n.elite = n.elite[1:]
 				i++
-				if len(n.elite) == 0 {
-					break
-				}
 			}
 			for k := j; k < i-1; k++ {
 				n.buffer[k] = k
@@ -224,15 +207,18 @@ func (n *NsgaIISelection) fillNondominatedSort(config *moea.Config, objectives [
 			n.assignCrowdingDistance(objectives, n.buffer[j:i-1])
 			rank++
 		} else {
-			n.crowdingFill(objectives, mixedPopulation, newPopulation, n.elite[0:frontSize], i)
+			n.crowdingFill(objectives, mixedPopulation, newPopulation, elite[0:frontSize], i)
 			archieveSize = config.Population.Len()
-			for j = i; j < config.Population.Len(); j++ {
+			for j := i; j < config.Population.Len(); j++ {
 				n.rank[j] = rank
 			}
 		}
-		n.elite = n.elite[:0]
-		if archieveSize >= config.Population.Len() {
-			break
-		}
 	}
+}
+
+func insert(dst []int, value int) []int {
+	dst = append(dst, -1)
+	copy(dst[1:], dst[0:len(dst)-1])
+	dst[0] = value
+	return dst
 }

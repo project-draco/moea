@@ -75,20 +75,19 @@ func TestCrowdingFill(t *testing.T) {
 }
 
 func TestFillNondominatedSort(t *testing.T) {
-	mixedPopulation := integer.NewRandomIntegerPopulation(8, 1, []integer.Bound{{0, 10}}, rng)
 	newPopulation := integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
 	for _, f := range []struct {
 		in  [][]float64
 		out []int
 	}{
 		{[][]float64{{0.0}, {1.0}, {2.0}, {3.0}}, []int{0, 1, 2, 3}},
-		// {[][]float64{{3.0}, {2.0}, {1.0}, {0.0}}, []int{3, 2, 1, 0}},
+		{[][]float64{{3.0}, {2.0}, {1.0}, {0.0}}, []int{3, 2, 1, 0}},
 	} {
-		n.fillNondominatedSort(c, f.in, mixedPopulation, newPopulation)
+		n.fillNondominatedSort(c, f.in, c.Population, newPopulation)
 		for i := 0; i < 4; i++ {
-			if c.Population.Individual(i).Value(0) != newPopulation.Individual(f.out[i-1]).Value(0) {
+			if c.Population.Individual(i).Value(0) != newPopulation.Individual(f.out[i]).Value(0) {
 				t.Error("Expected", c.Population.Individual(i).Value(0),
-					"but was", newPopulation.Individual(f.out[i-1]).Value(0))
+					"but was", newPopulation.Individual(f.out[i]).Value(0))
 			}
 		}
 	}
