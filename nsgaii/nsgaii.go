@@ -1,7 +1,6 @@
 package nsgaii
 
 import (
-	"fmt"
 	"math"
 	"sort"
 
@@ -15,7 +14,6 @@ type NsgaIISelection struct {
 	indexes               [][]int
 	pool                  []int
 	elite                 []int
-	buffer                []int
 }
 
 // crowddist.c: assign_crowding_distance, assign_crowding_distance_list, assign_crowding_distance_indices
@@ -63,16 +61,15 @@ func (bd byDistance) Less(i, j int) bool {
 
 func (n *NsgaIISelection) Initialize(config *moea.Config) {
 	n.rank = make([]int, config.Population.Len())
-	n.crowdingDistance = make([]float64, config.Population.Len())
-	n.constraintsViolations = make([]float64, config.Population.Len())
-	arr := make([]int, config.NumberOfObjectives*config.Population.Len())
+	n.crowdingDistance = make([]float64, config.Population.Len()*2)
+	n.constraintsViolations = make([]float64, config.Population.Len()*2)
+	arr := make([]int, config.NumberOfObjectives*config.Population.Len()*2)
 	n.indexes = make([][]int, config.NumberOfObjectives)
 	for i := 0; i < config.NumberOfObjectives; i++ {
-		n.indexes[i] = arr[i*config.Population.Len() : (i+1)*config.Population.Len()]
+		n.indexes[i] = arr[i*config.Population.Len()*2 : (i+1)*config.Population.Len()*2]
 	}
 	n.pool = make([]int, config.Population.Len()*2)
 	n.elite = make([]int, config.Population.Len()*2)
-	n.buffer = make([]int, config.Population.Len()*2)
 }
 
 func (n *NsgaIISelection) assignCrowdingDistance(objectives [][]float64, dist []int) {
@@ -89,7 +86,7 @@ func (n *NsgaIISelection) assignCrowdingDistance(objectives [][]float64, dist []
 		for j := 0; j < len(dist); j++ {
 			n.indexes[i][j] = dist[j]
 		}
-		sort.Sort(byObjectives{n.indexes[i][0:len(dist)], objectives, i})
+		sort.Stable(byObjectives{n.indexes[i][0:len(dist)], objectives, i})
 	}
 	for i := 0; i < len(dist); i++ {
 		n.crowdingDistance[dist[i]] = 0.0
@@ -152,73 +149,55 @@ func (n *NsgaIISelection) crowdingFill(objectives [][]float64, mixedPopulation, 
 	for i, index := range elite {
 		n.indexes[0][i] = index
 	}
-	sort.Sort(byDistance{n.indexes[0][0:len(elite)], n.crowdingDistance})
+	sort.Stable(byDistance{n.indexes[0][0:len(elite)], n.crowdingDistance})
 	for i, j := start, len(elite)-1; i < newPopulation.Len(); i, j = i+1, j-1 {
 		individual := mixedPopulation.Individual(n.indexes[0][i])
 		newPopulation.Individual(i).Copy(individual, 0, individual.Len())
 	}
 }
 
-func (n *NsgaIISelection) fillNondominatedSort(config *moea.Config, objectives [][]float64, mixedPopulation, newPopulation moea.Population) {
+func (n *NsgaIISelection) fillNondominatedSort(objectives [][]float64, mixedPopulation, newPopulation moea.Population) {
 	pool := n.pool[:0]
 	for i := 0; i < mixedPopulation.Len(); i++ {
 		pool = append(pool, i)
 	}
-	archieveSize := 0
 	rank := 1
-	i := 0
-	for archieveSize < config.Population.Len() {
+	for i := 0; i < newPopulation.Len(); {
 		elite := n.elite[0:1]
 		elite[0] = pool[0]
 		pool = pool[1:]
-		frontSize := 1
-		for temp1 := 0; temp1 < len(pool); temp1++ {
+		for j := 0; j < len(pool); j++ {
 			var flag int
-			for temp2 := 0; temp2 < len(elite); temp2++ {
-				flag = n.checkDominance(objectives, pool[temp1], elite[temp2])
-				fmt.Println(flag, pool, temp1, elite, temp2, pool[temp1], elite[temp2])
+			for k := 0; k < len(elite); k++ {
+				flag = n.checkDominance(objectives, pool[j], elite[k])
 				if flag == 1 {
-					pool = insert(pool, elite[temp2])
-					elite = append(elite[0:temp2], elite[temp2+1:]...)
-					frontSize--
+					pool = append(pool, elite[k])
+					elite = append(elite[0:k], elite[k+1:]...)
+					k--
 				} else if flag == -1 {
 					break
 				}
 			}
-			fmt.Println("***")
 			if flag == 0 || flag == 1 {
-				elite = insert(elite, pool[temp1])
-				frontSize++
-				pool = append(pool[0:temp1], pool[temp1+1:]...)
+				elite = append(elite, pool[j])
+				pool = append(pool[0:j], pool[j+1:]...)
+				j--
 			}
 		}
-		j := i
-		if archieveSize+frontSize <= config.Population.Len() {
-			for k := 0; k < len(elite); k++ {
-				individual := mixedPopulation.Individual(elite[k])
+		if i+len(elite) <= newPopulation.Len() {
+			for _, index := range elite {
+				individual := mixedPopulation.Individual(index)
 				newPopulation.Individual(i).Copy(individual, 0, individual.Len())
 				n.rank[i] = rank
-				archieveSize++
 				i++
 			}
-			for k := j; k < i-1; k++ {
-				n.buffer[k] = k
-			}
-			n.assignCrowdingDistance(objectives, n.buffer[j:i-1])
+			n.assignCrowdingDistance(objectives, elite)
 			rank++
 		} else {
-			n.crowdingFill(objectives, mixedPopulation, newPopulation, elite[0:frontSize], i)
-			archieveSize = config.Population.Len()
-			for j := i; j < config.Population.Len(); j++ {
-				n.rank[j] = rank
+			n.crowdingFill(objectives, mixedPopulation, newPopulation, elite, i)
+			for ; i < newPopulation.Len(); i++ {
+				n.rank[i] = rank
 			}
 		}
 	}
-}
-
-func insert(dst []int, value int) []int {
-	dst = append(dst, -1)
-	copy(dst[1:], dst[0:len(dst)-1])
-	dst[0] = value
-	return dst
 }

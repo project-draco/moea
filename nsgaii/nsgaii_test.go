@@ -20,16 +20,22 @@ func init() {
 }
 
 func TestAssignCrowdingDistance(t *testing.T) {
+	c.NumberOfObjectives = 2
+	n.Initialize(c)
 	for _, f := range []struct {
 		in  [][]float64
 		out []float64
 	}{
 		{[][]float64{{0.0}, {1.0}, {2.0}, {3.0}}, []float64{2.0 / 3.0, 2.0 / 3.0}},
 		{[][]float64{{0.0}, {2.5}, {2.0}, {3.0}}, []float64{1.0 / 3.0, 2.5 / 3.0}},
+		{[][]float64{{0.0, 0.0}, {1.0, 1.0}, {2.0, 2.0}, {3.0, 3.0}},
+			[]float64{2.0 / 3.0, 2.0 / 3.0}},
+		{[][]float64{{0.0, 0.0}, {1.0, 2.0}, {2.0, 1.0}, {3.0, 4.0}},
+			[]float64{(2.0/3.0 + 3.0/4.0) / 2.0, (2.0/3.0 + 2.0/4.0) / 2.0}},
 	} {
 		n.assignCrowdingDistance(f.in, []int{0, 1, 2, 3})
 		for i := 1; i < 3; i++ {
-			if n.crowdingDistance[i] != f.out[i-1] {
+			if int(n.crowdingDistance[i]*1000000) != int(f.out[i-1]*1000000) {
 				t.Error("Expected ", f.out[i-1], " but was ", n.crowdingDistance[i])
 			}
 		}
@@ -75,19 +81,33 @@ func TestCrowdingFill(t *testing.T) {
 }
 
 func TestFillNondominatedSort(t *testing.T) {
+	mixedPopulation := integer.NewRandomIntegerPopulation(8, 1, []integer.Bound{{0, 10}}, rng)
 	newPopulation := integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
-	for _, f := range []struct {
-		in  [][]float64
-		out []int
+	for testcase, f := range []struct {
+		in   [][]float64
+		out  []int
+		rank []int
 	}{
-		{[][]float64{{0.0}, {1.0}, {2.0}, {3.0}}, []int{0, 1, 2, 3}},
-		{[][]float64{{3.0}, {2.0}, {1.0}, {0.0}}, []int{3, 2, 1, 0}},
+		{[][]float64{{0.0}, {1.0}, {2.0}, {3.0}, {4.0}, {5.0}, {6.0}, {7.0}},
+			[]int{0, 1, 2, 3}, []int{1, 2, 3, 4}},
+		{[][]float64{{7.0}, {6.0}, {5.0}, {4.0}, {3.0}, {2.0}, {1.0}, {0.0}},
+			[]int{7, 6, 5, 4}, []int{1, 2, 3, 4}},
+		{[][]float64{{0.0}, {0.0}, {0.0}, {0.0}, {0.0}, {0.0}, {0.0}, {0.0}},
+			[]int{7, 6, 5, 4}, []int{1, 1, 1, 1}},
+		{[][]float64{{1.0}, {0.0}, {0.0}, {1.0}, {2.0}, {2.0}, {2.0}, {2.0}},
+			[]int{1, 2, 3, 0}, []int{1, 1, 2, 2}},
+		{[][]float64{{0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 2.0}, {2.0, 1.0},
+			{5.0, 5.0}, {5.0, 5.0}, {5.0, 5.0}, {5.0, 5.0}},
+			[]int{0, 1, 2, 4}, []int{1, 1, 1, 2}},
 	} {
-		n.fillNondominatedSort(c, f.in, c.Population, newPopulation)
+		n.fillNondominatedSort(f.in, mixedPopulation, newPopulation)
 		for i := 0; i < 4; i++ {
-			if c.Population.Individual(i).Value(0) != newPopulation.Individual(f.out[i]).Value(0) {
-				t.Error("Expected", c.Population.Individual(i).Value(0),
-					"but was", newPopulation.Individual(f.out[i]).Value(0))
+			if mixedPopulation.Individual(f.out[i]).Value(0) != newPopulation.Individual(i).Value(0) {
+				t.Error("Expected", mixedPopulation.Individual(f.out[i]).Value(0),
+					"but was", newPopulation.Individual(i).Value(0), "testcase", testcase)
+			}
+			if n.rank[i] != f.rank[i] {
+				t.Error("Expected rank", f.rank[i], "but was", n.rank[i], "testcase", testcase)
 			}
 		}
 	}
