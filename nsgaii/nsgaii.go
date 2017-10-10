@@ -151,7 +151,7 @@ func (n *NsgaIISelection) crowdingFill(objectives [][]float64, mixedPopulation, 
 	}
 	sort.Stable(byDistance{n.indexes[0][0:len(elite)], n.crowdingDistance})
 	for i, j := start, len(elite)-1; i < newPopulation.Len(); i, j = i+1, j-1 {
-		individual := mixedPopulation.Individual(n.indexes[0][i])
+		individual := mixedPopulation.Individual(n.indexes[0][j])
 		newPopulation.Individual(i).Copy(individual, 0, individual.Len())
 	}
 }
@@ -191,7 +191,7 @@ func (n *NsgaIISelection) fillNondominatedSort(objectives [][]float64, mixedPopu
 				n.rank[i] = rank
 				i++
 			}
-			n.assignCrowdingDistance(objectives, elite)
+			// n.assignCrowdingDistance(objectives, elite)
 			rank++
 		} else {
 			n.crowdingFill(objectives, mixedPopulation, newPopulation, elite, i)

@@ -63,18 +63,18 @@ func TestCheckDominance(t *testing.T) {
 
 func TestCrowdingFill(t *testing.T) {
 	newPopulation := integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
-	for _, f := range []struct {
+	for testcase, f := range []struct {
 		in  [][]float64
 		out []int
 	}{
-		{[][]float64{{0.0}, {1.0}, {2.5}, {3.0}}, []int{2, 1}},
-		{[][]float64{{0.0}, {0.25}, {2.5}, {3.0}}, []int{1, 2}},
+		{[][]float64{{0.0}, {1.0}, {2.5}, {3.0}}, []int{1, 2}},
+		{[][]float64{{0.0}, {0.25}, {2.5}, {3.0}}, []int{2, 1}},
 	} {
-		n.crowdingFill(f.in, c.Population, newPopulation, []int{0, 1, 2, 3}, 1)
+		n.crowdingFill(f.in, c.Population, newPopulation, []int{0, 1, 2, 3}, 0)
 		for i := 1; i < 3; i++ {
 			if c.Population.Individual(i).Value(0) != newPopulation.Individual(f.out[i-1]).Value(0) {
 				t.Error("Expected", c.Population.Individual(i).Value(0),
-					"but was", newPopulation.Individual(f.out[i-1]).Value(0))
+					"but was", newPopulation.Individual(f.out[i-1]).Value(0), "testcase", testcase)
 			}
 		}
 	}
@@ -93,12 +93,12 @@ func TestFillNondominatedSort(t *testing.T) {
 		{[][]float64{{7.0}, {6.0}, {5.0}, {4.0}, {3.0}, {2.0}, {1.0}, {0.0}},
 			[]int{7, 6, 5, 4}, []int{1, 2, 3, 4}},
 		{[][]float64{{0.0}, {0.0}, {0.0}, {0.0}, {0.0}, {0.0}, {0.0}, {0.0}},
-			[]int{7, 6, 5, 4}, []int{1, 1, 1, 1}},
+			[]int{0, 7, 6, 5}, []int{1, 1, 1, 1}},
 		{[][]float64{{1.0}, {0.0}, {0.0}, {1.0}, {2.0}, {2.0}, {2.0}, {2.0}},
 			[]int{1, 2, 3, 0}, []int{1, 1, 2, 2}},
-		{[][]float64{{0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 2.0}, {2.0, 1.0},
+		{[][]float64{{0.0, 0.0}, {0.0, 0.0}, {1.5, 1.5}, {1.0, 2.0}, {2.0, 1.0},
 			{5.0, 5.0}, {5.0, 5.0}, {5.0, 5.0}, {5.0, 5.0}},
-			[]int{0, 1, 2, 4}, []int{1, 1, 1, 2}},
+			[]int{0, 1, 4, 3}, []int{1, 1, 2, 2}},
 	} {
 		n.fillNondominatedSort(f.in, mixedPopulation, newPopulation)
 		for i := 0; i < 4; i++ {
