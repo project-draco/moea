@@ -1,6 +1,7 @@
 package nsgaii
 
 import (
+	"math"
 	"testing"
 
 	"project-draco.io/moea"
@@ -108,6 +109,33 @@ func TestFillNondominatedSort(t *testing.T) {
 			}
 			if n.rank[i] != f.rank[i] {
 				t.Error("Expected rank", f.rank[i], "but was", n.rank[i], "testcase", testcase)
+			}
+		}
+	}
+}
+
+func TestAssignRankAndCrowdingDistance(t *testing.T) {
+	for testcase, f := range []struct {
+		in               [][]float64
+		rank             []int
+		crowdingDistance []float64
+	}{
+		{[][]float64{{0.0}, {1.0}, {2.0}, {3.0}}, []int{1, 2, 3, 4},
+			[]float64{math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, math.MaxFloat64}},
+		{[][]float64{{3.0}, {2.0}, {1.0}, {0.0}}, []int{4, 3, 2, 1},
+			[]float64{math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, math.MaxFloat64}},
+		{[][]float64{{0.0}, {0.0}, {0.0}, {0.0}}, []int{1, 1, 1, 1},
+			[]float64{math.MaxFloat64, 0, 0, 0}},
+	} {
+		n.assignRankAndCrowdingDistance(f.in)
+		for i, r := range f.rank {
+			if n.rank[i] != r {
+				t.Error("Expected rank", r, "but was", n.rank[i], "testcase", testcase)
+			}
+		}
+		for i, d := range f.crowdingDistance {
+			if n.crowdingDistance[i] != d {
+				t.Error("Expected crowdingDistance", d, "but was", n.crowdingDistance[i], "testcase", testcase)
 			}
 		}
 	}
