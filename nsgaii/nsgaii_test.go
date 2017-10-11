@@ -2,6 +2,7 @@ package nsgaii
 
 import (
 	"math"
+	"reflect"
 	"testing"
 
 	"project-draco.io/moea"
@@ -34,7 +35,7 @@ func TestAssignCrowdingDistance(t *testing.T) {
 		{[][]float64{{0.0, 0.0}, {1.0, 2.0}, {2.0, 1.0}, {3.0, 4.0}},
 			[]float64{(2.0/3.0 + 3.0/4.0) / 2.0, (2.0/3.0 + 2.0/4.0) / 2.0}},
 	} {
-		n.assignCrowdingDistance(f.in, []int{0, 1, 2, 3})
+		n.assignCrowdingDistance(f.in, []int{0, 1, 2, 3}, n.crowdingDistance)
 		for i := 1; i < 3; i++ {
 			if int(n.crowdingDistance[i]*1000000) != int(f.out[i-1]*1000000) {
 				t.Error("Expected ", f.out[i-1], " but was ", n.crowdingDistance[i])
@@ -71,10 +72,11 @@ func TestCrowdingFill(t *testing.T) {
 		{[][]float64{{0.0}, {1.0}, {2.5}, {3.0}}, []int{1, 2}},
 		{[][]float64{{0.0}, {0.25}, {2.5}, {3.0}}, []int{2, 1}},
 	} {
-		n.crowdingFill(f.in, c.Population, newPopulation, []int{0, 1, 2, 3}, 0)
+		n.mixedObjectives = f.in
+		n.crowdingFill(newPopulation, f.in, []int{0, 1, 2, 3}, 0)
 		for i := 1; i < 3; i++ {
-			if c.Population.Individual(i).Value(0) != newPopulation.Individual(f.out[i-1]).Value(0) {
-				t.Error("Expected", c.Population.Individual(i).Value(0),
+			if n.mixedPopulation.Individual(i).Value(0) != newPopulation.Individual(f.out[i-1]).Value(0) {
+				t.Error("Expected", n.mixedPopulation.Individual(i).Value(0),
 					"but was", newPopulation.Individual(f.out[i-1]).Value(0), "testcase", testcase)
 			}
 		}
@@ -82,8 +84,10 @@ func TestCrowdingFill(t *testing.T) {
 }
 
 func TestFillNondominatedSort(t *testing.T) {
-	mixedPopulation := integer.NewRandomIntegerPopulation(8, 1, []integer.Bound{{0, 10}}, rng)
+	n.previousPopulation = integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
+	n.merge(integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng), nil)
 	newPopulation := integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
+	newObjectives := [][]float64{{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
 	for testcase, f := range []struct {
 		in   [][]float64
 		out  []int
@@ -101,11 +105,16 @@ func TestFillNondominatedSort(t *testing.T) {
 			{5.0, 5.0}, {5.0, 5.0}, {5.0, 5.0}, {5.0, 5.0}},
 			[]int{0, 1, 4, 3}, []int{1, 1, 2, 2}},
 	} {
-		n.fillNondominatedSort(f.in, mixedPopulation, newPopulation)
+		n.mixedObjectives = f.in
+		n.fillNondominatedSort(newPopulation, newObjectives)
 		for i := 0; i < 4; i++ {
-			if mixedPopulation.Individual(f.out[i]).Value(0) != newPopulation.Individual(i).Value(0) {
-				t.Error("Expected", mixedPopulation.Individual(f.out[i]).Value(0),
+			if n.mixedPopulation.Individual(f.out[i]).Value(0) != newPopulation.Individual(i).Value(0) {
+				t.Error("Expected", n.mixedPopulation.Individual(f.out[i]).Value(0),
 					"but was", newPopulation.Individual(i).Value(0), "testcase", testcase)
+			}
+			if !reflect.DeepEqual(n.mixedObjectives[f.out[i]], newObjectives[i]) {
+				t.Error("Expected objective", n.mixedObjectives[f.out[i]],
+					"but was", newObjectives[i], "testcase", testcase)
 			}
 			if n.rank[i] != f.rank[i] {
 				t.Error("Expected rank", f.rank[i], "but was", n.rank[i], "testcase", testcase)
