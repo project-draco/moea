@@ -80,6 +80,12 @@ func Run(config *Config) (*Result, error) {
 		result.Crossovers += generationResult.Crossovers
 		result.Individuals = generationResult.Individuals
 	}
+	type finalizer interface {
+		Finalize(*Result)
+	}
+	if f, ok := config.Algorithm.(finalizer); ok {
+		f.Finalize(result)
+	}
 	return result, nil
 }
 

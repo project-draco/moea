@@ -39,15 +39,20 @@ func main() {
 	problem := sch
 
 	rng := moea.NewXorshiftWithSeed(uint32(time.Now().UTC().UnixNano()))
+	lengths := make([]int, problem.numberOfValues)
+	for i := 0; i < problem.numberOfValues; i++ {
+		lengths[i] = 32
+	}
+	nsgaiiSelection := &nsgaii.NsgaIISelection{}
 	config := &moea.Config{
-		Algorithm:             moea.NewSimpleAlgorithm(&nsgaii.NsgaIISelection{}),
-		Population:            binary.NewRandomBinaryPopulation(100, []int{32, 32}, nil, rng),
+		Algorithm:             moea.NewSimpleAlgorithm(nsgaiiSelection),
+		Population:            binary.NewRandomBinaryPopulation(100, lengths, nil, rng),
 		NumberOfValues:        problem.numberOfValues,
 		NumberOfObjectives:    2,
 		ObjectiveFunc:         problem.objectiveFunction,
 		MaxGenerations:        250,
 		CrossoverProbability:  0.9,
-		MutationProbability:   1.0 / 64.0,
+		MutationProbability:   1.0 / (float64(problem.numberOfValues) * 32.0),
 		RandomNumberGenerator: rng,
 	}
 	result, err := moea.Run(config)
@@ -55,12 +60,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		return
 	}
-	for _, i := range result.Individuals {
-		fmt.Printf("%v", i.Objective)
+	for i, individual := range result.Individuals {
+		fmt.Printf("%v", individual.Objective)
 		for j := 0; j < problem.numberOfValues; j++ {
 			from, to := problem.bounds(j)
-			fmt.Printf(" %.2f", valueAsFloat(i.Values[j], from, to))
+			fmt.Printf(" %.2f", valueAsFloat(individual.Values[j], from, to))
 		}
-		fmt.Println()
+		fmt.Printf(" %v\n", nsgaiiSelection.Rank[i])
 	}
 }

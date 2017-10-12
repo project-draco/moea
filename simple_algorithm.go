@@ -104,6 +104,15 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 	return a.result, nil
 }
 
+func (a *simpleAlgorithm) Finalize(result *Result) {
+	type finalizer interface {
+		Finalize(*Config, Population, [][]float64, *Result)
+	}
+	if f, ok := a.selectionOperator.(finalizer); ok {
+		f.Finalize(a.config, a.oldPopulation, a.oldObjectives, result)
+	}
+}
+
 func (rws RouletteWheelSelection) OnGeneration(config *Config, objectives [][]float64) {
 	rws.objectivesSum = 0
 	for _, o := range objectives {

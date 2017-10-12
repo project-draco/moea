@@ -116,8 +116,8 @@ func TestFillNondominatedSort(t *testing.T) {
 				t.Error("Expected objective", n.mixedObjectives[f.out[i]],
 					"but was", newObjectives[i], "testcase", testcase)
 			}
-			if n.rank[i] != f.rank[i] {
-				t.Error("Expected rank", f.rank[i], "but was", n.rank[i], "testcase", testcase)
+			if n.Rank[i] != f.rank[i] {
+				t.Error("Expected rank", f.rank[i], "but was", n.Rank[i], "testcase", testcase)
 			}
 		}
 	}
@@ -138,8 +138,8 @@ func TestAssignRankAndCrowdingDistance(t *testing.T) {
 	} {
 		n.assignRankAndCrowdingDistance(f.in)
 		for i, r := range f.rank {
-			if n.rank[i] != r {
-				t.Error("Expected rank", r, "but was", n.rank[i], "testcase", testcase)
+			if n.Rank[i] != r {
+				t.Error("Expected rank", r, "but was", n.Rank[i], "testcase", testcase)
 			}
 		}
 		for i, d := range f.crowdingDistance {
