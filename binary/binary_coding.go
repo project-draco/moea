@@ -9,10 +9,11 @@ import (
 )
 
 type binaryPopulation struct {
-	individuals []moea.Individual
-	bi          []binaryIndividual
-	arr         []big.Word
-	vars        []big.Word
+	individuals        []moea.Individual
+	bi                 []binaryIndividual
+	vars               []big.Word
+	poolRepresentation *pool
+	poolVariables      *pool
 }
 
 type binaryIndividual struct {
@@ -51,7 +52,6 @@ func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng moea
 		totalLen += l
 	}
 	variableWordCount, variableWordCountTotal := computeVariableWordCount(lengths)
-	// varsSlices := make([][]big.Word, len(lengths)*size)
 	allVariables := make([]bs, len(lengths)*size)
 	pointersToAllVariables := make([]*bs, len(lengths)*size)
 	for i := 0; i < len(allVariables); i++ {
@@ -61,27 +61,24 @@ func NewRandomBinaryPopulation(size int, lengths []int, bounds []Bound, rng moea
 	if bounds != nil {
 		mappings = mappingsFromBounds(bounds, lengths)
 	}
-	individualSize := totalLen / wordBitsize
-	if totalLen%wordBitsize > 0 {
-		individualSize++
-	}
 	result := &binaryPopulation{
 		make([]moea.Individual, size),
 		make([]binaryIndividual, size),
-		make([]big.Word, individualSize*size),
-		make([]big.Word, variableWordCountTotal*size)}
+		make([]big.Word, variableWordCountTotal*size),
+		newPool([]int{totalLen}, size),
+		newPool(lengths, size),
+	}
 	for i := 0; i < size; i++ {
-		result.bi[i].representation =
-			newBinString(totalLen, result.arr[i*individualSize:(i+1)*individualSize], nil, nil)
+		w, bigint, bigbits, bsi := result.poolRepresentation.get(0, i)
+		result.bi[i].representation = newBinString(totalLen, w, bigint, bigbits, bsi)
 		randomize(result.bi[i].representation, rng)
 		result.bi[i].lengths = lengths
 		result.bi[i].bounds = bounds
 		result.bi[i].mappings = mappings
 		result.bi[i].starts = starts
 		result.bi[i].totalLen = totalLen
-		// result.bi[i].variables = varsSlices[i*len(lengths) : (i+1)*len(lengths)]
 		result.bi[i].variables = pointersToAllVariables[i*len(lengths) : (i+1)*len(lengths)]
-		mapVars(&result.bi[i], i*variableWordCountTotal, result.vars, variableWordCount)
+		result.mapVars(i)
 		result.bi[i].variableWordCount = variableWordCount
 		result.bi[i].variableWordCountTotal = variableWordCountTotal
 		result.bi[i].rng = rng
@@ -99,30 +96,25 @@ func (p *binaryPopulation) Clone() moea.Population {
 		return p
 	}
 	first := p.individuals[0].(*binaryIndividual)
-	individualSize := first.representation.Len() / wordBitsize
-	if first.representation.Len()%wordBitsize > 0 {
-		individualSize++
-	}
 	result := &binaryPopulation{
 		make([]moea.Individual, p.Len()),
 		make([]binaryIndividual, p.Len()),
-		make([]big.Word, individualSize*p.Len()),
-		make([]big.Word, first.variableWordCountTotal*p.Len())}
-	// varsSlices := make([][]big.Word, len(first.lengths)*p.Len())
+		make([]big.Word, first.variableWordCountTotal*p.Len()),
+		p.poolRepresentation.clone(),
+		p.poolVariables.clone(),
+	}
 	allVariables := make([]bs, len(first.lengths)*p.Len())
 	pointersToAllVariables := make([]*bs, len(first.lengths)*p.Len())
 	for i := 0; i < len(allVariables); i++ {
 		pointersToAllVariables[i] = &allVariables[i]
 	}
 	copy(result.bi, p.bi)
-	copy(result.arr, p.arr)
 	copy(result.vars, p.vars)
 	for i := 0; i < p.Len(); i++ {
-		result.bi[i].representation =
-			newBinString(first.representation.Len(), result.arr[i*individualSize:(i+1)*individualSize], nil, nil)
-		// result.bi[i].variables = varsSlices[i*len(first.lengths) : (i+1)*len(first.lengths)]
+		w, bigint, bigbits, bsi := result.poolRepresentation.get(0, i)
+		result.bi[i].representation = newBinString(first.representation.Len(), w, bigint, bigbits, bsi)
 		result.bi[i].variables = pointersToAllVariables[i*len(first.lengths) : (i+1)*len(first.lengths)]
-		mapVars(&result.bi[i], i*first.variableWordCountTotal, result.vars, first.variableWordCount)
+		result.mapVars(i)
 		result.individuals[i] = &result.bi[i]
 	}
 	return result
@@ -134,21 +126,11 @@ func (r *binaryIndividual) Clone() moea.Individual {
 	return result
 }
 
-func mapVars(bi *binaryIndividual, v int, vars []big.Word, variableWordCount []int) {
-	for j := 0; j < len(bi.lengths); j++ {
-		bi.variables[j].init(bi.lengths[j], vars[v:v+variableWordCount[j]], nil, nil)
-		v += variableWordCount[j]
+func (bp *binaryPopulation) mapVars(j int) {
+	for i := 0; i < len(bp.bi[j].lengths); i++ {
+		w, bigint, bigbits, bsi := bp.poolVariables.get(i, j)
+		bp.bi[j].variables[i].init(bp.bi[j].lengths[i], w, bigint, bigbits, bsi)
 	}
-}
-
-func computeVariableWordCount(lengths []int) ([]int, int) {
-	variableWordCountTotal := 0
-	variableWordCount := make([]int, len(lengths))
-	for i, l := range lengths {
-		variableWordCount[i] = l/wordBitsize + 1
-		variableWordCountTotal += variableWordCount[i]
-	}
-	return variableWordCount, variableWordCountTotal
 }
 
 func randomize(representation BinaryString, rng moea.RNG) {
@@ -280,17 +262,35 @@ func newFromString(s []string, bounds []Bound) *binaryIndividual {
 		bi.totalLen += len(each)
 		ss += s[i]
 	}
-	bi.representation = newBinString(len(ss), nil, nil, nil)
+	bi.representation = newBinString(len(ss), nil, nil, nil, nil)
 	bi.representation.SetString(ss)
 	bi.variableWordCount, bi.variableWordCountTotal = computeVariableWordCount(bi.lengths)
 	vars := make([]big.Word, bi.variableWordCountTotal)
 	v := 0
 	for i := 0; i < len(bi.variables); i++ {
-		bi.variables[i] = newBinString(bi.lengths[i], vars[v:v+bi.variableWordCount[i]], nil, nil)
+		bi.variables[i] = newBinString(bi.lengths[i], vars[v:v+bi.variableWordCount[i]], nil, nil, nil)
 		v += bi.variableWordCount[i]
 	}
 	if bounds != nil {
 		bi.mappings = mappingsFromBounds(bounds, bi.lengths)
 	}
 	return bi
+}
+
+func computeVariableWordCount(lengths []int) ([]int, int) {
+	variableWordCountTotal := 0
+	variableWordCount := make([]int, len(lengths))
+	for i, l := range lengths {
+		variableWordCount[i] = l/wordBitsize + 1
+		variableWordCountTotal += variableWordCount[i]
+	}
+	return variableWordCount, variableWordCountTotal
+}
+
+func howManyWords(i int) int {
+	result := i / wordBitsize
+	if i%wordBitsize > 0 {
+		result++
+	}
+	return result
 }

@@ -85,9 +85,11 @@ func (n *NsgaIISelection) Initialize(config *moea.Config) {
 	n.mixedCrowdingDistance = make([]float64, config.Population.Len()*2)
 	n.constraintsViolations = make([]float64, config.Population.Len()*2)
 	n.mixedPopulation = make(mixedPopulation, config.Population.Len()*2)
+	clone1 := config.Population.Clone()
+	clone2 := config.Population.Clone()
 	for i := 0; i < config.Population.Len()*2; i += 2 {
-		n.mixedPopulation[i] = config.Population.Individual(i / 2).Clone()
-		n.mixedPopulation[i+1] = config.Population.Individual(i / 2).Clone()
+		n.mixedPopulation[i] = clone1.Individual(i / 2)
+		n.mixedPopulation[i+1] = clone2.Individual(i / 2)
 	}
 	n.mixedObjectives = make([][]float64, config.Population.Len()*2)
 	arr := make([]int, config.NumberOfObjectives*config.Population.Len()*2)

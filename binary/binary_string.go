@@ -39,17 +39,25 @@ type bs struct {
 
 type bsi struct{ *bs }
 
-func newBinString(l int, w []big.Word, bigint *big.Int, bigbits []big.Word) *bs {
+type pool struct {
+	w              []big.Word
+	bigints        []big.Int
+	bigbits        []big.Word
+	starts         []int
+	bsis           []bsi
+	lengths        []int
+	count          int
+	wordCountTotal int
+}
+
+func newBinString(l int, w []big.Word, bigint *big.Int, bigbits []big.Word, bsi_ *bsi) *bs {
 	result := &bs{}
-	result.init(l, w, bigint, bigbits)
+	result.init(l, w, bigint, bigbits, bsi_)
 	return result
 }
 
-func (b *bs) init(l int, w []big.Word, bigint *big.Int, bigbits []big.Word) {
-	words := l / wordBitsize
-	if l%wordBitsize > 0 {
-		words++
-	}
+func (b *bs) init(l int, w []big.Word, bigint *big.Int, bigbits []big.Word, bsi_ *bsi) {
+	words := howManyWords(l)
 	if w == nil {
 		w = make([]big.Word, words)
 	}
@@ -58,11 +66,53 @@ func (b *bs) init(l int, w []big.Word, bigint *big.Int, bigbits []big.Word) {
 		bigint = new(big.Int)
 		bigint.SetBits(bigbits)
 	}
+	if bsi_ == nil {
+		bsi_ = &bsi{}
+	}
 	b.w = w
 	b.l = l
 	b.bigbits = bigbits
 	b.bigint = bigint
-	b.bsi = &bsi{b}
+	b.bsi = bsi_
+	b.bsi.bs = b
+}
+
+func newPool(lengths []int, count int) *pool {
+	result := &pool{}
+	result.starts = make([]int, len(lengths)+1)
+	wordCountTotal := 0
+	for i, l := range lengths {
+		w := howManyWords(l)
+		result.starts[i+1] = result.starts[i] + w
+		wordCountTotal += w
+	}
+	result.w = make([]big.Word, wordCountTotal*count)
+	result.bigbits = make([]big.Word, wordCountTotal*count)
+	result.bigints = make([]big.Int, len(lengths)*count)
+	result.bsis = make([]bsi, len(lengths)*count)
+	result.lengths = lengths
+	result.count = count
+	result.wordCountTotal = wordCountTotal
+	return result
+}
+
+func (p *pool) get(i, j int) ([]big.Word, *big.Int, []big.Word, *bsi) {
+	f, t := p.starts[i]+j*p.wordCountTotal, p.starts[i+1]+j*p.wordCountTotal
+	index := i + j*len(p.lengths)
+	return p.w[f:t], &p.bigints[index], p.bigbits[f:t], &p.bsis[index]
+}
+
+func (p *pool) clone() *pool {
+	result := newPool(p.lengths, p.count)
+	copy(result.w, p.w)
+	copy(result.bigbits, p.bigbits)
+	copy(result.bigints, p.bigints)
+	copy(result.bsis, p.bsis)
+	copy(result.starts, p.starts)
+	copy(result.lengths, p.lengths)
+	result.count = p.count
+	result.wordCountTotal = p.wordCountTotal
+	return result
 }
 
 func (b *bs) Len() int {
@@ -161,10 +211,7 @@ func (s *bs) Slice(i, j int, dest BinaryString) {
 		destWords[lastWord-firstWord-1] &= ^big.Word(0) >> uint(wordBitsize-(j-i)%wordBitsize)
 	}
 	// discard unused words at the end
-	wordCount := (j - i) / wordBitsize
-	if (j-i)%wordBitsize > 0 {
-		wordCount++
-	}
+	wordCount := howManyWords(j - i)
 	if len(destWords) > wordCount {
 		destWords = destWords[0 : len(destWords)-1]
 	}
