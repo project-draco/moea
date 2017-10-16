@@ -65,18 +65,18 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		f2 := a.config.ObjectiveFunc(child2)
 		a.newObjectives[i] = f1
 		a.newObjectives[i+1] = f2
-		if f1[0] >= f2[0] && f1[0] > a.result.BestObjective[0] {
+		if f1[0] <= f2[0] && f1[0] < a.result.BestObjective[0] {
 			a.result.BestIndividual = child1
-		} else if f2[0] >= f1[0] && f2[0] > a.result.BestObjective[0] {
+		} else if f2[0] <= f1[0] && f2[0] < a.result.BestObjective[0] {
 			a.result.BestIndividual = child2
 		}
 		for j := 0; j < a.config.NumberOfObjectives; j++ {
 			a.objectivesSum[j] += f1[j] + f2[j]
-			if math.Max(f1[j], f2[j]) > a.result.BestObjective[j] {
-				a.result.BestObjective[j] = math.Max(f1[j], f2[j])
+			if math.Min(f1[j], f2[j]) < a.result.BestObjective[j] {
+				a.result.BestObjective[j] = math.Min(f1[j], f2[j])
 			}
-			if math.Min(f1[j], f2[j]) < a.result.WorstObjective[j] {
-				a.result.WorstObjective[j] = math.Min(f1[j], f2[j])
+			if math.Max(f1[j], f2[j]) > a.result.WorstObjective[j] {
+				a.result.WorstObjective[j] = math.Max(f1[j], f2[j])
 			}
 		}
 		a.result.Individuals[i].Objective = f1
@@ -125,7 +125,7 @@ func (rws RouletteWheelSelection) Selection(config *Config, objectives [][]float
 	sum := 0.0
 	for i := 0; i < config.Population.Len(); i++ {
 		sum += objectives[i][0]
-		if sum >= r {
+		if -sum >= -r {
 			return i
 		}
 	}
@@ -136,7 +136,7 @@ func (ts TournamentSelection) Selection(config *Config, objectives [][]float64) 
 	result := -1
 	for i := 0; i < ts.TournamentSize; i++ {
 		r := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
-		if result == -1 || objectives[r][0] > objectives[result][0] {
+		if result == -1 || objectives[r][0] < objectives[result][0] {
 			result = r
 		}
 	}

@@ -36,7 +36,7 @@ func main() {
 		for i := 0; i < l; i++ {
 			it.Next(&w, &j)
 			if it.Test(w, j) {
-				result[0]++
+				result[0]--
 			}
 		}
 		return result
@@ -46,7 +46,7 @@ func main() {
 		result := []float64{0.0}
 		for _, x := range arr {
 			if x {
-				result[0]++
+				result[0]--
 			}
 		}
 		return result

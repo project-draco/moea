@@ -69,7 +69,7 @@ func Run(config *Config) (*Result, error) {
 			config.OnGenerationFunc(i, generationResult)
 		}
 		for j := 0; j < config.NumberOfObjectives; j++ {
-			if generationResult.BestObjective[j] > result.BestObjective[j] {
+			if generationResult.BestObjective[j] < result.BestObjective[j] {
 				if j == 0 {
 					result.BestIndividual.Copy(generationResult.BestIndividual, 0, result.BestIndividual.Len())
 				}
@@ -104,7 +104,7 @@ func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
 				if err != nil {
 					panic(err)
 				}
-				if bestResults[cpu] == nil || bestResults[cpu].BestObjective[0] < result.BestObjective[0] {
+				if bestResults[cpu] == nil || bestResults[cpu].BestObjective[0] > result.BestObjective[0] {
 					bestResults[cpu] = result
 				}
 			}
@@ -116,7 +116,7 @@ func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
 	}
 	var bestResult *Result
 	for i := 0; i < numCPU; i++ {
-		if bestResult == nil || bestResult.BestObjective[0] < bestResults[i].BestObjective[0] {
+		if bestResult == nil || bestResult.BestObjective[0] > bestResults[i].BestObjective[0] {
 			bestResult = bestResults[i]
 		}
 	}
