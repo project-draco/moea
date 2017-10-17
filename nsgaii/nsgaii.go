@@ -127,6 +127,10 @@ func (n *NsgaIISelection) Finalize(config *moea.Config, population moea.Populati
 		result.Individuals[i].Parent1 = -1
 		result.Individuals[i].Parent2 = -1
 		result.Individuals[i].CrossSite = -1
+		if result.BestObjective[0] > result.Individuals[i].Objective[0] {
+			result.BestObjective[0] = result.Individuals[i].Objective[0]
+			result.BestIndividual = population.Individual(i)
+		}
 	}
 }
 
