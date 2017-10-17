@@ -11,9 +11,8 @@ type simpleAlgorithm struct {
 	objectivesSum        []float64
 	oldPopulation        Population
 	newPopulation        Population
-	mutations            []bool
-	mutationsIndexes     []int
 	selectionOperator    SelectionOperator
+	mutationOperator     MutationOperator
 	crossoverProbability float64
 	mutationProbability  float64
 	result               *Result
@@ -23,12 +22,29 @@ type SelectionOperator interface {
 	Selection(config *Config, objectives [][]float64) int
 }
 
+type MutationOperator interface {
+	Mutation(config *Config, individual Individual, probability float64)
+}
+
 type RouletteWheelSelection struct{ objectivesSum float64 }
 
 type TournamentSelection struct{ TournamentSize int }
 
-func NewSimpleAlgorithm(selectionOperator SelectionOperator) Algorithm {
-	a := &simpleAlgorithm{selectionOperator: selectionOperator}
+type RegularMutation struct {
+	mutationsIndexes []int
+	mutations        int
+}
+
+type FastMutation struct{ RegularMutation }
+
+func NewSimpleAlgorithm(selectionOperator SelectionOperator, mutationOperator MutationOperator) Algorithm {
+	if selectionOperator == nil {
+		selectionOperator = &TournamentSelection{10}
+	}
+	if mutationOperator == nil {
+		mutationOperator = &RegularMutation{}
+	}
+	a := &simpleAlgorithm{selectionOperator: selectionOperator, mutationOperator: mutationOperator}
 	return a
 }
 
@@ -59,8 +75,8 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		parent1 := a.oldPopulation.Individual(parentIndex1)
 		parent2 := a.oldPopulation.Individual(parentIndex2)
 		crossSite := a.crossover(parent1, parent2, child1, child2)
-		a.mutate(child1)
-		a.mutate(child2)
+		a.mutationOperator.Mutation(a.config, child1, a.mutationProbability)
+		a.mutationOperator.Mutation(a.config, child2, a.mutationProbability)
 		f1 := a.config.ObjectiveFunc(child1)
 		f2 := a.config.ObjectiveFunc(child2)
 		a.newObjectives[i] = f1
@@ -111,16 +127,19 @@ func (a *simpleAlgorithm) Finalize(result *Result) {
 	if f, ok := a.selectionOperator.(finalizer); ok {
 		f.Finalize(a.config, a.oldPopulation, a.oldObjectives, result)
 	}
+	if f, ok := a.mutationOperator.(finalizer); ok {
+		f.Finalize(a.config, a.oldPopulation, a.oldObjectives, result)
+	}
 }
 
-func (rws RouletteWheelSelection) OnGeneration(config *Config, objectives [][]float64) {
+func (rws *RouletteWheelSelection) OnGeneration(config *Config, objectives [][]float64) {
 	rws.objectivesSum = 0
 	for _, o := range objectives {
 		rws.objectivesSum += o[0]
 	}
 }
 
-func (rws RouletteWheelSelection) Selection(config *Config, objectives [][]float64) int {
+func (rws *RouletteWheelSelection) Selection(config *Config, objectives [][]float64) int {
 	r := config.RandomNumberGenerator.Float64() * rws.objectivesSum
 	sum := 0.0
 	for i := 0; i < config.Population.Len(); i++ {
@@ -132,7 +151,7 @@ func (rws RouletteWheelSelection) Selection(config *Config, objectives [][]float
 	return config.Population.Len() - 1
 }
 
-func (ts TournamentSelection) Selection(config *Config, objectives [][]float64) int {
+func (ts *TournamentSelection) Selection(config *Config, objectives [][]float64) int {
 	result := -1
 	for i := 0; i < ts.TournamentSize; i++ {
 		r := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
@@ -158,18 +177,50 @@ func (a *simpleAlgorithm) crossover(parent1, parent2, child1, child2 Individual)
 	return cross
 }
 
-func (a *simpleAlgorithm) mutate(individual Individual) {
+func (m *RegularMutation) Initialize(config *Config) {
+	m.mutationsIndexes = make([]int, config.Population.Individual(0).Len())
+}
+
+func (m *RegularMutation) Mutation(config *Config, individual Individual, probability float64) {
 	len := individual.Len()
 	j := 0
 	for i := 0; i < len; i++ {
-		f := a.config.RandomNumberGenerator.Flip(a.mutationProbability)
+		f := config.RandomNumberGenerator.Flip(probability)
 		if f {
-			a.mutationsIndexes[j] = i
+			m.mutationsIndexes[j] = i
 			j++
-			a.result.Mutations++
+			m.mutations++
 		}
 	}
-	individual.Mutate(a.mutationsIndexes[0:j])
+	individual.Mutate(m.mutationsIndexes[0:j])
+}
+
+func (m *RegularMutation) Finalize(_ *Config, _ Population, _ [][]float64, result *Result) {
+	result.Mutations = m.mutations
+}
+
+func (m *FastMutation) Initialize(config *Config) {
+	m.RegularMutation.Initialize(config)
+}
+
+func (m *FastMutation) Mutation(config *Config, individual Individual, probability float64) {
+	j := 0
+	for len := float64(individual.Len()) * probability; len > 0; len-- {
+		i := int(config.RandomNumberGenerator.Float64() * float64(individual.Len()))
+		if i == individual.Len() {
+			i = individual.Len() - 1
+		}
+		if len >= 1 || config.RandomNumberGenerator.Flip(len) {
+			m.mutationsIndexes[j] = i
+			j++
+			m.mutations++
+		}
+	}
+	individual.Mutate(m.mutationsIndexes[0:j])
+}
+
+func (m *FastMutation) Finalize(_ *Config, _ Population, _ [][]float64, result *Result) {
+	m.RegularMutation.Finalize(nil, nil, nil, result)
 }
 
 func (a *simpleAlgorithm) Initialize(config *Config) {
@@ -185,8 +236,6 @@ func (a *simpleAlgorithm) Initialize(config *Config) {
 	}
 	a.oldPopulation = config.Population
 	a.newPopulation = config.Population.Clone()
-	a.mutations = make([]bool, a.oldPopulation.Individual(0).Len())
-	a.mutationsIndexes = make([]int, a.oldPopulation.Individual(0).Len())
 	a.crossoverProbability = a.config.CrossoverProbability
 	a.mutationProbability = a.config.MutationProbability
 	a.result = &Result{
@@ -199,6 +248,9 @@ func (a *simpleAlgorithm) Initialize(config *Config) {
 		Initialize(*Config)
 	}
 	if i, ok := a.selectionOperator.(initializer); ok {
+		i.Initialize(a.config)
+	}
+	if i, ok := a.mutationOperator.(initializer); ok {
 		i.Initialize(a.config)
 	}
 }

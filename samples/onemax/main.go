@@ -54,7 +54,7 @@ func main() {
 	f := func() *moea.Config {
 		rng := moea.NewXorshiftWithSeed(uint32(time.Now().UTC().UnixNano()))
 		return &moea.Config{
-			Algorithm: moea.NewSimpleAlgorithm(moea.TournamentSelection{10}),
+			Algorithm: moea.NewSimpleAlgorithm(&moea.TournamentSelection{10}, &moea.FastMutation{}),
 			Population: binary.NewRandomBinaryPopulation(300, []int{200},
 				nil /*[]binary.Bound{{strings.Repeat("0", 200), strings.Repeat("1", 100)}}*/, rng),
 			// Population:           moea.NewRandomBooleanPopulation(300, []int{200}),
