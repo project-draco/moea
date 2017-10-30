@@ -59,7 +59,7 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		a.objectivesSum[i] = 0
 		a.result.AverageObjective[i] = 0
 		a.result.WorstObjective[i] = 0
-		a.result.BestObjective[i] = 0
+		a.result.BestObjective[i] = math.MaxFloat64
 	}
 	type onGenerationListener interface {
 		OnGeneration(*Config, Population, [][]float64)

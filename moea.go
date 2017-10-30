@@ -1,5 +1,8 @@
 package moea // import "project-draco.io/moea"
-import "runtime"
+import (
+	"math"
+	"runtime"
+)
 
 type Config struct {
 	Algorithm             Algorithm
@@ -60,6 +63,9 @@ func Run(config *Config) (*Result, error) {
 	config.Algorithm.Initialize(config)
 	result.BestIndividual = config.Population.Individual(0).Clone()
 	result.BestObjective = make([]float64, config.NumberOfObjectives)
+	for i := 0; i < config.NumberOfObjectives; i++ {
+		result.BestObjective[i] = math.MaxFloat64
+	}
 	for i := 0; i < config.MaxGenerations; i++ {
 		generationResult, err := config.Algorithm.Generation()
 		if err != nil {
