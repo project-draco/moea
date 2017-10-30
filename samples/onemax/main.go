@@ -61,7 +61,7 @@ func main() {
 			NumberOfObjectives:    1,
 			ObjectiveFunc:         objectiveFunc,
 			MaxGenerations:        40,
-			CrossoverProbability:  0.5,
+			CrossoverProbability:  0.9,
 			MutationProbability:   1.0 / 200,
 			RandomNumberGenerator: rng,
 			OnGenerationFunc:      func(_ int, r *moea.Result) {},
