@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"project-draco.io/moea"
-	"project-draco.io/moea/integer"
+	"github.com/project-draco/moea"
+	"github.com/project-draco/moea/integer"
 )
 
 var n *NsgaIISelection

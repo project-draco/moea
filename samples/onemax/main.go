@@ -8,8 +8,8 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"project-draco.io/moea"
-	"project-draco.io/moea/binary"
+	"github.com/project-draco/moea"
+	"github.com/project-draco/moea/binary"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")

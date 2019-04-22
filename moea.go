@@ -1,4 +1,4 @@
-package moea // import "project-draco.io/moea"
+package moea // import "github.com/project-draco/moea"
 import (
 	"math"
 	"runtime"

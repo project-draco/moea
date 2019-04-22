@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"project-draco.io/moea"
+	"github.com/project-draco/moea"
 )
 
 type NsgaSelection struct {

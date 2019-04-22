@@ -3,8 +3,8 @@ package nsga
 import (
 	"testing"
 
-	"project-draco.io/moea"
-	"project-draco.io/moea/integer"
+	"github.com/project-draco/moea"
+	"github.com/project-draco/moea/integer"
 )
 
 func TestNewFromString(t *testing.T) {

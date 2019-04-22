@@ -1,6 +1,6 @@
 package integer
 
-import "project-draco.io/moea"
+import "github.com/project-draco/moea"
 
 type integerPopulation []moea.Individual
 

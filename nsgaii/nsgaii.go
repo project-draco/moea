@@ -4,7 +4,7 @@ import (
 	"math"
 	"sort"
 
-	"project-draco.io/moea"
+	"github.com/project-draco/moea"
 )
 
 type NsgaIISelection struct {

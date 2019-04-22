@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
-	"project-draco.io/moea"
-	"project-draco.io/moea/binary"
-	"project-draco.io/moea/nsga"
+	"github.com/project-draco/moea"
+	"github.com/project-draco/moea/binary"
+	"github.com/project-draco/moea/nsga"
 )
 
 func main() {
@@ -73,7 +73,7 @@ func main() {
 		Dshare:      9.0,
 	}
 	config := &moea.Config{
-		Algorithm:             moea.NewSimpleAlgorithm(nsga),
+		Algorithm:             moea.NewSimpleAlgorithm(nsga, &moea.FastMutation{}),
 		Population:            binary.NewRandomBinaryPopulation(100, []int{32, 32}, nil, rng),
 		NumberOfValues:        2,
 		NumberOfObjectives:    2,
