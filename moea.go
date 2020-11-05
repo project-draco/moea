@@ -128,3 +128,27 @@ func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
 	}
 	return bestResult, nil
 }
+
+func (r *Result) ParettoFrontier() (front []IndividualResult) {
+	for i, ind1 := range r.Individuals {
+		dominatedBySomeOtherIndividual := false
+		for j, ind2 := range r.Individuals {
+			if i == j {
+				continue
+			}
+			dominatedByThisIndividual := true
+			for k := range ind1.Objective {
+				if ind1.Objective[k] < ind2.Objective[k] {
+					dominatedByThisIndividual = false
+				}
+			}
+			if dominatedByThisIndividual {
+				dominatedBySomeOtherIndividual = true
+			}
+		}
+		if !dominatedBySomeOtherIndividual {
+			front = append(front, ind1)
+		}
+	}
+	return front
+}
