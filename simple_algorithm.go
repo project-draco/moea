@@ -83,8 +83,10 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		a.newObjectives[i+1] = f2
 		if f1[0] <= f2[0] && f1[0] < a.result.BestObjective[0] {
 			a.result.BestIndividual = child1
+			a.result.BestIndividualIndex = i
 		} else if f2[0] <= f1[0] && f2[0] < a.result.BestObjective[0] {
 			a.result.BestIndividual = child2
+			a.result.BestIndividualIndex = i + 1
 		}
 		for j := 0; j < a.config.NumberOfObjectives; j++ {
 			a.objectivesSum[j] += f1[j] + f2[j]
