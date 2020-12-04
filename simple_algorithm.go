@@ -2,6 +2,7 @@ package moea
 
 import (
 	"math"
+	//"fmt"
 )
 
 type simpleAlgorithm struct {
@@ -65,7 +66,9 @@ func (a *simpleAlgorithm) Generation() (*Result, error) {
 		OnGeneration(*Config, Population, [][]float64)
 	}
 	if l, ok := a.selectionOperator.(onGenerationListener); ok {
+		//fmt.Printf("ahhhh\n")
 		l.OnGeneration(a.config, a.oldPopulation, a.oldObjectives)
+		//fmt.Printf("ihhhh\n")
 	}
 	for i := 0; i < a.newPopulation.Len(); i += 2 {
 		child1 := a.newPopulation.Individual(i)

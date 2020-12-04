@@ -1,14 +1,16 @@
-package nsgaii
+package nsgaiii
 
 import (
 	"math"
 	"sort"
-
-	"github.com/project-draco/moea"
+	"fmt"
+	"../"
 )
 
-type NsgaIISelection struct {
+type NsgaIIISelection struct {
+	ReferencePointsDivision int
 	Rank                  []int
+	referencePointArray   []ReferencePoint
 	crowdingDistance      []float64
 	mixedCrowdingDistance []float64
 	constraintsViolations []float64
@@ -22,12 +24,15 @@ type NsgaIISelection struct {
 	sequence              []int
 }
 
-// crowddist.c: assign_crowding_distance, assign_crowding_distance_list, assign_crowding_distance_indices
-// dominance.c: check_dominance
-// fillnds.c: fill_nondominated_sort, crowding_fill
-// rank.c: assign_ranking_and_crowding_distance
-// tourselect.c: selection, tournament
-// sort.c
+type ReferencePoint struct {
+	position []float64
+}
+
+type NormalizedIndividual struct {
+	index int
+	objectives []float64
+}
+
 
 type mixedPopulation []moea.Individual
 
@@ -79,7 +84,28 @@ func (bd byDistance) Less(i, j int) bool {
 	return bd.distances[bd.indexes[i]] < bd.distances[bd.indexes[j]]
 }
 
-func (n *NsgaIISelection) Initialize(config *moea.Config) {
+func generateReferencePoints(numberOfDivisions int, nroObjectives int) []ReferencePoint {
+	var referencePointArray []ReferencePoint
+	var referencePoint ReferencePoint
+	referencePoint.position = make([]float64, nroObjectives)
+	generateReferencePointsRecursive(&referencePointArray, referencePoint, nroObjectives, numberOfDivisions, numberOfDivisions, 0)
+	return referencePointArray
+}
+
+func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, currentPoint ReferencePoint, numberOfObjectives int, left int, total int, element int) {
+	if(element == (numberOfObjectives - 1)) {
+		currentPoint.position[element] = float64(left)/float64(total)
+		*referencePointArray = append(*referencePointArray, currentPoint)
+	} else {
+		for i := 0; i <= left; i++ {
+			currentPoint.position[element] = float64(i)/float64(total)
+			generateReferencePointsRecursive(referencePointArray, currentPoint, numberOfObjectives, left - i, total, element + 1)
+		}
+	}
+}
+
+func (n *NsgaIIISelection) Initialize(config *moea.Config) {
+	n.referencePointArray = generateReferencePoints(n.ReferencePointsDivision, config.NumberOfObjectives)
 	n.Rank = make([]int, config.Population.Len())
 	n.crowdingDistance = make([]float64, config.Population.Len())
 	n.mixedCrowdingDistance = make([]float64, config.Population.Len()*2)
@@ -105,18 +131,35 @@ func (n *NsgaIISelection) Initialize(config *moea.Config) {
 	}
 }
 
-func (n *NsgaIISelection) OnGeneration(config *moea.Config, population moea.Population, objectives [][]float64) {
+func (n *NsgaIIISelection) OnGeneration(config *moea.Config, population moea.Population, objectives [][]float64) {
 	if n.previousPopulation == nil {
+		//fmt.Printf("ehhhh\n")
 		n.assignRankAndCrowdingDistance(objectives)
+		/*for i := 0; i < len(objectives); i++ {
+			fmt.Printf("[")
+			for j := 0; j < config.NumberOfObjectives; j++ {
+				fmt.Printf(" %.4f,", objectives[i][j])
+			}
+			fmt.Printf("]\n")
+		}*/
 	} else {
+		//fmt.Printf("phhhh\n")
 		n.merge(population, objectives)
 		n.fillNondominatedSort(population, objectives)
+		/*for i := 0; i < len(objectives); i++ {
+			fmt.Printf("[")
+			for j := 0; j < config.NumberOfObjectives; j++ {
+				fmt.Printf(" %.4f,", objectives[i][j])
+			}
+			fmt.Printf("]\n")
+		}*/
 	}
 	n.previousPopulation = population
 	n.previousObjectives = objectives
 }
 
-func (n *NsgaIISelection) Finalize(config *moea.Config, population moea.Population, objectives [][]float64, result *moea.Result) {
+func (n *NsgaIIISelection) Finalize(config *moea.Config, population moea.Population, objectives [][]float64, result *moea.Result) {
+	//fmt.Printf("aqui3\n")
 	n.merge(population, objectives)
 	n.fillNondominatedSort(population, objectives)
 	for i := 0; i < population.Len(); i++ {
@@ -134,7 +177,7 @@ func (n *NsgaIISelection) Finalize(config *moea.Config, population moea.Populati
 	}
 }
 
-func (n *NsgaIISelection) Selection(config *moea.Config, objectives [][]float64) int {
+func (n *NsgaIIISelection) Selection(config *moea.Config, objectives [][]float64) int {
 	r0 := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
 	r1 := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
 	flag := n.checkDominance(objectives, r0, r1)
@@ -152,7 +195,7 @@ func (n *NsgaIISelection) Selection(config *moea.Config, objectives [][]float64)
 	return r1
 }
 
-func (n *NsgaIISelection) checkDominance(objectives [][]float64, a, b int) int {
+func (n *NsgaIIISelection) checkDominance(objectives [][]float64, a, b int) int {
 	if n.constraintsViolations[a] < 0 && n.constraintsViolations[b] < 0 {
 		if n.constraintsViolations[a] > n.constraintsViolations[b] {
 			return 1
@@ -185,7 +228,7 @@ func (n *NsgaIISelection) checkDominance(objectives [][]float64, a, b int) int {
 	}
 }
 
-func (n *NsgaIISelection) assignCrowdingDistance(objectives [][]float64, dist []int, crowdingDistance []float64) {
+func (n *NsgaIIISelection) assignCrowdingDistance(objectives [][]float64, dist []int, crowdingDistance []float64) {
 	if len(objectives) == 0 || len(dist) == 0 {
 		return
 	}
@@ -224,7 +267,7 @@ func (n *NsgaIISelection) assignCrowdingDistance(objectives [][]float64, dist []
 	}
 }
 
-func (n *NsgaIISelection) crowdingFill(newPopulation moea.Population, newObjectives [][]float64, elite []int, start int) {
+func (n *NsgaIIISelection) crowdingFill(newPopulation moea.Population, newObjectives [][]float64, elite []int, start int) {
 	n.assignCrowdingDistance(n.mixedObjectives, elite, n.mixedCrowdingDistance)
 	for i, index := range elite {
 		n.indexes[0][i] = index
@@ -238,21 +281,172 @@ func (n *NsgaIISelection) crowdingFill(newPopulation moea.Population, newObjecti
 	}
 }
 
-func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, newObjectives [][]float64) {
+func  (n *NsgaIIISelection) normalizeObjectives(individualsIndexes []int, intercepts []float64, idealPoint[]float64, nroObjectives int) []NormalizedIndividual{
+	var normalizedIndividuals = make([]NormalizedIndividual, 0)
+	for i := 0; i < len(individualsIndexes); i++ {
+		var normalizeObjectives = make([]float64, nroObjectives)
+		for j := 0; j < nroObjectives; j++ {
+			normalizeObjectives[j] = normalizeObjective(n.mixedObjectives[individualsIndexes[i]], j, intercepts, idealPoint)
+		}
+		var normalizedIndividual NormalizedIndividual
+		normalizedIndividual.objectives = normalizeObjectives
+		normalizedIndividual.index = individualsIndexes[i]
+		normalizedIndividuals = append(normalizedIndividuals, normalizedIndividual)
+	}
+	return normalizedIndividuals
+}
+
+func normalizeObjective(individual []float64, objectiveIndex int, intercepts []float64,  idealPoint[]float64) float64 {
+	var epsilon = 1e-20
+	if math.Abs(intercepts[objectiveIndex] - idealPoint[objectiveIndex]) > epsilon {
+		return individual[objectiveIndex] / (intercepts[objectiveIndex] - idealPoint[objectiveIndex])
+	} else {
+		return individual[objectiveIndex] / epsilon
+	}
+}
+
+func minimunArray(a []float64, b []float64)[]float64 {
+	var aux = make([]float64, len(a))
+	for i := 0; i < len(aux); i++ {
+		if(a[i] < b[i]) {
+			aux[i] = a[i]
+		} else {
+			aux[i] = b[i]
+		}
+	}
+	return aux
+}
+
+func (n *NsgaIIISelection) findIdealPoint(elite []int, nroObjectives int) []float64{
+	var currentIdeal = make([]float64, nroObjectives)
+	for i := 0; i < len(currentIdeal); i++ {
+		currentIdeal[i] = math.Inf(1)
+	}
+	for _, index := range elite {
+		var aux = make([]float64, nroObjectives)
+		for i := 0; i < len(aux); i++ {
+			aux[i] = n.mixedObjectives[index][i] * -1
+		}
+		currentIdeal = minimunArray(currentIdeal, aux)
+	}
+	return currentIdeal
+}
+
+func (n *NsgaIIISelection) findExtremeIndividualForObjective(elite []int, objective int) int {
+	var maxValue = math.Inf(-1)
+	var maxValueIndex = 0
+	for i := 0; i < len(elite); i++ {
+		if(n.mixedObjectives[elite[i]][objective] * -1 > maxValue) {
+			maxValue = n.mixedObjectives[elite[i]][objective] * -1
+			maxValueIndex = elite[i]
+		}
+	}
+	return maxValueIndex
+}
+
+func (n *NsgaIIISelection) findExtremePoints(elite []int, nroObjectives int) []int {
+	var extremePoints = make([]int, nroObjectives)
+	for i := 0; i < len(extremePoints); i++ {
+		var index = n.findExtremeIndividualForObjective(elite, i)
+		extremePoints[i] = index
+	}
+	return extremePoints
+}
+
+func (n *NsgaIIISelection) guassianElimination(a [][]float64, b []float64) []float64 {
+	var N = len(a)
+	var x = make([]float64, N)
+	for i := 0; i < N; i++ {
+		a[i] = append(a[i], b[i])
+	}
+	for base := 0; base < N-1; base++ {
+		for target := base+1; target < N; target++ {
+			var ratio = a[target][base]/a[base][base]
+			for term := 0; term < len(a[base]); term++ {
+				a[target][term] = a[target][term] - a[base][term]*ratio;
+			}
+		}
+	}
+	for i := 0; i < len(x); i++ {
+		x[i] = 0
+	}
+	for i := N-1; i >=0 ; i--{
+		for known := i+1; known<N; known++ {
+			a[i][N] = a[i][N] - a[i][known]*x[known]
+		}
+		x[i] = a[i][N] / a[i][i]
+	}
+	return x
+}
+
+func (n *NsgaIIISelection) constructHyperplane(elite []int, extremes []int, nroObjectives int) []float64{
+	var intercepts = make([]float64, nroObjectives)
+	if(n.hasDuplicateIndividuals(elite)) {
+		for i := 0; i < len(intercepts); i++ {
+			intercepts[i] = n.mixedObjectives[extremes[i]][i]
+		}
+	} else {
+		var b = make([]float64, nroObjectives)
+		for i := 0; i < len(b); i++ {
+			b[i] = 1
+		}
+		var a = make([][]float64, len(extremes))
+		for i := 0; i < len(a); i++ {
+			var aux = make([]float64, nroObjectives)
+			for j := 0; j < nroObjectives; j++ {
+				aux[j] = n.mixedObjectives[extremes[i]][j]
+			}
+			a[i] = aux
+		}
+		var x = n.guassianElimination(a, b)
+		for i := 0; i < len(intercepts); i++ {
+			intercepts[i] = 1/x[i]
+		}
+	}
+	return intercepts
+}
+
+func (n *NsgaIIISelection) hasDuplicateIndividuals(elite []int) bool{
+	for i := 0; i < len(elite); i++ {
+		for j := 0; j < len(elite); j++ {
+			if(j != i) {
+				if(n.hasSameValuesForObjectives(n.mixedObjectives[elite[i]], n.mixedObjectives[elite[j]])) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (n *NsgaIIISelection) hasSameValuesForObjectives(a []float64, b []float64) bool{
+	for i := 0; i < len(a); i++ {
+		if(a[i] == b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, newObjectives [][]float64) {
 	pool := n.pool[:0]
 	for i := 0; i < n.mixedPopulation.Len(); i++ {
 		pool = append(pool, i)
+		//fmt.Printf("%d, ", pool[i])
 	}
+	//fmt.Printf("\n")
+	remaining := newPopulation.Len()
 	rank := 1
-	remaining = newPopulation.Len()
 	for i := 0; i < newPopulation.Len(); {
 		elite := n.elite[0:1]
 		elite[0] = pool[0]
 		pool = pool[1:]
 		for j := 0; j < len(pool); j++ {
 			var flag int
+			//fmt.Printf("----> %d\n", elite)
 			for k := 0; k < len(elite); k++ {
 				flag = n.checkDominance(n.mixedObjectives, pool[j], elite[k])
+				//fmt.Printf("----> %d\n", flag)
 				if flag == 1 {
 					pool = append(pool, elite[k])
 					elite = append(elite[:k], elite[k+1:]...)
@@ -263,7 +457,9 @@ func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, ne
 			}
 			if flag == 0 || flag == 1 {
 				elite = append(elite, pool[j])
+				//fmt.Printf("----> %d\n", elite)
 				pool = append(pool[:j], pool[j+1:]...)
+				//fmt.Printf("----> %d\n", pool)
 				j--
 			}
 		}
@@ -276,11 +472,16 @@ func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, ne
 				n.Rank[i] = rank
 				i++
 			}
+			remaining -= len(elite)
 			n.assignCrowdingDistance(newObjectives, n.sequence[j:j+len(elite)], n.crowdingDistance)
 			rank++
-			remaining -= len(elite)
 		} else {
-			n.crowdingFill(newPopulation, newObjectives, elite, i)
+			//n.crowdingFill(newPopulation, newObjectives, elite, i)
+			var nroObjectives = len(n.mixedObjectives[0])
+			var idealPoint = n.findIdealPoint(elite, nroObjectives)
+			var extremes = n.findExtremePoints(elite, nroObjectives)
+			var intercepts = n.constructHyperplane(elite, extremes, nroObjectives)
+			var normalizedIndividuals = n.normalizeObjectives(elite, intercepts, idealPoint, nroObjectives)
 			for ; i < newPopulation.Len(); i++ {
 				n.Rank[i] = rank
 			}
@@ -288,7 +489,7 @@ func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, ne
 	}
 }
 
-func (n *NsgaIISelection) assignRankAndCrowdingDistance(objectives [][]float64) {
+func (n *NsgaIIISelection) assignRankAndCrowdingDistance(objectives [][]float64) {
 	orig := n.pool[:0]
 	for i := 0; i < len(objectives); i++ {
 		orig = append(orig, i)
@@ -329,7 +530,7 @@ func (n *NsgaIISelection) assignRankAndCrowdingDistance(objectives [][]float64) 
 	}
 }
 
-func (n *NsgaIISelection) merge(population moea.Population, objectives [][]float64) {
+func (n *NsgaIIISelection) merge(population moea.Population, objectives [][]float64) {
 	for i := 0; i < n.previousPopulation.Len()*2; i++ {
 		var individual moea.Individual
 		if i < n.previousPopulation.Len() {

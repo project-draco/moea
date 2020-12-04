@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/project-draco/moea"
+	"../"
 )
 
 func TestNewFromString(t *testing.T) {

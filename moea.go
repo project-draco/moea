@@ -2,6 +2,7 @@ package moea // import "github.com/project-draco/moea"
 import (
 	"math"
 	"runtime"
+	"fmt" 
 )
 
 type Config struct {
@@ -62,15 +63,18 @@ func Run(config *Config) (*Result, error) {
 	result := &Result{}
 	config.Algorithm.Initialize(config)
 	result.BestIndividual = config.Population.Individual(0).Clone()
+	fmt.Printf("%v\n", config.Population.Individual(0).Clone())
 	result.BestObjective = make([]float64, config.NumberOfObjectives)
 	for i := 0; i < config.NumberOfObjectives; i++ {
 		result.BestObjective[i] = math.MaxFloat64
 	}
 	for i := 0; i < config.MaxGenerations; i++ {
+		//fmt.Printf("uhhhhh\n")
 		generationResult, err := config.Algorithm.Generation()
 		if err != nil {
 			return nil, err
 		}
+		//fmt.Printf("nhhhh\n")
 		if config.OnGenerationFunc != nil {
 			config.OnGenerationFunc(i, generationResult)
 		}
