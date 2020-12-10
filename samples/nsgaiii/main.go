@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"../../"
+	"../.."
 	"../../binary"
 	"../../nsgaiii"
 )

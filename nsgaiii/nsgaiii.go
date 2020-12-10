@@ -26,13 +26,21 @@ type NsgaIIISelection struct {
 
 type ReferencePoint struct {
 	position []float64
+	associationCount int
+	associations []NormalizedIndividual
 }
 
 type NormalizedIndividual struct {
 	index int
 	objectives []float64
+	referencePoint ReferencePoint
+	distance float64
 }
 
+type Association struct{
+	point *ReferencePoint
+	dist float64
+}
 
 type mixedPopulation []moea.Individual
 
@@ -95,7 +103,14 @@ func generateReferencePoints(numberOfDivisions int, nroObjectives int) []Referen
 func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, currentPoint ReferencePoint, numberOfObjectives int, left int, total int, element int) {
 	if(element == (numberOfObjectives - 1)) {
 		currentPoint.position[element] = float64(left)/float64(total)
-		*referencePointArray = append(*referencePointArray, currentPoint)
+		currentPoint.associationCount = 0
+		currentPoint.associations = make([]NormalizedIndividual, 0)
+		var referencePoint = currentPoint
+		referencePoint.position = make([]float64, len(currentPoint.position))
+		for i := 0; i < len(referencePoint.position); i++ {
+			referencePoint.position[i] = currentPoint.position[i]
+		}
+		*referencePointArray = append(*referencePointArray, referencePoint)
 	} else {
 		for i := 0; i <= left; i++ {
 			currentPoint.position[element] = float64(i)/float64(total)
@@ -105,7 +120,7 @@ func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, cur
 }
 
 func (n *NsgaIIISelection) Initialize(config *moea.Config) {
-	n.referencePointArray = generateReferencePoints(n.ReferencePointsDivision, config.NumberOfObjectives)
+	n.referencePointArray = generateReferencePoints(n.numberOfDivisions, config.nroObjectives)
 	n.Rank = make([]int, config.Population.Len())
 	n.crowdingDistance = make([]float64, config.Population.Len())
 	n.mixedCrowdingDistance = make([]float64, config.Population.Len()*2)
@@ -428,6 +443,46 @@ func (n *NsgaIIISelection) hasSameValuesForObjectives(a []float64, b []float64) 
 	return true
 }
 
+func perpendicularDistance(normalizedObjectives []float64, referencePoint []float64) float64 {
+	var numerator float64 = 0
+	var denominator float64 = 0
+	for i := 0; i < len(referencePoint); i++ {
+		numerator += referencePoint[i] * normalizedObjectives[i]
+		denominator += referencePoint[i] * referencePoint[i]
+	}
+	var k = numerator/denominator
+	var d float64 = 0
+	for i := 0; i < len(referencePoint); i++ {
+		d += (k*referencePoint[i] - normalizedObjectives[i]) * (k*referencePoint[i] - normalizedObjectives[i])
+	}
+	return math.Sqrt(d)
+}
+
+func (n *NsgaIIISelection) associate(normalizedIndividuals []NormalizedIndividual, nroObjectives int) {
+	for index, individual := range normalizedIndividuals {
+		var rpDist = make([]Association, len(n.referencePointArray))
+		for i := 0; i < len(n.referencePointArray); i++ {
+			var association Association
+			association.point = &n.referencePointArray[i]
+			association.dist = perpendicularDistance(individual.objectives, n.referencePointArray[i].position)
+			rpDist[i] = association
+		}
+		/*fmt.Printf("-------------\n")
+		for i := 0; i < len(rpDist); i++ {
+			fmt.Printf("^^^^%f\n", rpDist[i].dist)
+		}*/
+		sort.SliceStable(rpDist, func(i, j int) bool {
+			return rpDist[i].dist < rpDist[j].dist
+		})
+		var bestDist = rpDist[0].dist
+		var bestRp = rpDist[0].point
+		normalizedIndividuals[index].referencePoint = *bestRp
+		normalizedIndividuals[index].distance = bestDist
+		bestRp.associationCount++
+		bestRp.associations = append(bestRp.associations, individual)
+	}
+}
+
 func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, newObjectives [][]float64) {
 	pool := n.pool[:0]
 	for i := 0; i < n.mixedPopulation.Len(); i++ {
@@ -482,6 +537,14 @@ func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, n
 			var extremes = n.findExtremePoints(elite, nroObjectives)
 			var intercepts = n.constructHyperplane(elite, extremes, nroObjectives)
 			var normalizedIndividuals = n.normalizeObjectives(elite, intercepts, idealPoint, nroObjectives)
+			n.associate(normalizedIndividuals, nroObjectives)
+			for i := 0; i < len(n.referencePointArray); i++ {
+				n.referencePointArray[i].associationCount = 0;
+				n.referencePointArray[i].associations = nil
+			}
+			/*for i := 0; i < len(normalizedIndividuals); i++ {
+				fmt.Printf("%d ---> %f\n", normalizedIndividuals[i].index, normalizedIndividuals[i].distance)
+			}*/
 			for ; i < newPopulation.Len(); i++ {
 				n.Rank[i] = rank
 			}
