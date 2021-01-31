@@ -5,7 +5,6 @@ import (
 	"math"
 	"os"
 	"time"
-
 	"../.."
 	"../../binary"
 	"../../nsgaiii"
@@ -37,7 +36,7 @@ var zdt6 = problem{
 		}
 		g := 1 + 9*math.Pow(s/9.0, 0.25)
 		f1 := 1 - math.Exp(-4*x)*math.Pow(math.Sin(6*math.Pi*x), 6)
-		return []float64{f1, g * (1 - math.Pow(f1/g, 2)), 1/f1, 1/g, 1/(f1*g)}
+		return []float64{f1, g * (1 - math.Pow(f1/g, 2))}
 	},
 }
 
@@ -57,7 +56,7 @@ func main() {
 		Algorithm:             moea.NewSimpleAlgorithm(nsgaiiiSelection, &moea.FastMutation{}),
 		Population:            binary.NewRandomBinaryPopulation(100, lengths, nil, rng),
 		NumberOfValues:        problem.numberOfValues,
-		NumberOfObjectives:    5,
+		NumberOfObjectives:    2,
 		ObjectiveFunc:         problem.objectiveFunction,
 		MaxGenerations:        250,
 		CrossoverProbability:  0.9,

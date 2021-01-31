@@ -1,9 +1,9 @@
 package nsgaiii
 
 import (
+	"math/rand"
 	"math"
 	"sort"
-	"fmt"
 	"../"
 )
 
@@ -103,13 +103,13 @@ func generateReferencePoints(numberOfDivisions int, nroObjectives int) []Referen
 func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, currentPoint ReferencePoint, numberOfObjectives int, left int, total int, element int) {
 	if(element == (numberOfObjectives - 1)) {
 		currentPoint.position[element] = float64(left)/float64(total)
-		currentPoint.associationCount = 0
-		currentPoint.associations = make([]NormalizedIndividual, 0)
 		var referencePoint = currentPoint
 		referencePoint.position = make([]float64, len(currentPoint.position))
 		for i := 0; i < len(referencePoint.position); i++ {
 			referencePoint.position[i] = currentPoint.position[i]
 		}
+		referencePoint.associations = make([]NormalizedIndividual, 0)
+		referencePoint.associationCount = 0
 		*referencePointArray = append(*referencePointArray, referencePoint)
 	} else {
 		for i := 0; i <= left; i++ {
@@ -120,7 +120,7 @@ func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, cur
 }
 
 func (n *NsgaIIISelection) Initialize(config *moea.Config) {
-	n.referencePointArray = generateReferencePoints(n.numberOfDivisions, config.nroObjectives)
+	n.referencePointArray = generateReferencePoints(n.ReferencePointsDivision, config.NumberOfObjectives)
 	n.Rank = make([]int, config.Population.Len())
 	n.crowdingDistance = make([]float64, config.Population.Len())
 	n.mixedCrowdingDistance = make([]float64, config.Population.Len()*2)
@@ -148,33 +148,16 @@ func (n *NsgaIIISelection) Initialize(config *moea.Config) {
 
 func (n *NsgaIIISelection) OnGeneration(config *moea.Config, population moea.Population, objectives [][]float64) {
 	if n.previousPopulation == nil {
-		//fmt.Printf("ehhhh\n")
-		n.assignRankAndCrowdingDistance(objectives)
-		/*for i := 0; i < len(objectives); i++ {
-			fmt.Printf("[")
-			for j := 0; j < config.NumberOfObjectives; j++ {
-				fmt.Printf(" %.4f,", objectives[i][j])
-			}
-			fmt.Printf("]\n")
-		}*/
+		n.assignRank(objectives)
 	} else {
-		//fmt.Printf("phhhh\n")
 		n.merge(population, objectives)
 		n.fillNondominatedSort(population, objectives)
-		/*for i := 0; i < len(objectives); i++ {
-			fmt.Printf("[")
-			for j := 0; j < config.NumberOfObjectives; j++ {
-				fmt.Printf(" %.4f,", objectives[i][j])
-			}
-			fmt.Printf("]\n")
-		}*/
 	}
 	n.previousPopulation = population
 	n.previousObjectives = objectives
 }
 
 func (n *NsgaIIISelection) Finalize(config *moea.Config, population moea.Population, objectives [][]float64, result *moea.Result) {
-	//fmt.Printf("aqui3\n")
 	n.merge(population, objectives)
 	n.fillNondominatedSort(population, objectives)
 	for i := 0; i < population.Len(); i++ {
@@ -240,59 +223,6 @@ func (n *NsgaIIISelection) checkDominance(objectives [][]float64, a, b int) int 
 		} else {
 			return 0
 		}
-	}
-}
-
-func (n *NsgaIIISelection) assignCrowdingDistance(objectives [][]float64, dist []int, crowdingDistance []float64) {
-	if len(objectives) == 0 || len(dist) == 0 {
-		return
-	}
-	if len(dist) <= 2 {
-		crowdingDistance[dist[0]] = math.MaxFloat64
-		if len(dist) == 2 {
-			crowdingDistance[dist[1]] = math.MaxFloat64
-		}
-	}
-	for i := 0; i < len(objectives[0]); i++ {
-		for j := 0; j < len(dist); j++ {
-			n.indexes[i][j] = dist[j]
-		}
-		sort.Stable(byObjectives{n.indexes[i][0:len(dist)], objectives, i})
-	}
-	for i := 0; i < len(dist); i++ {
-		crowdingDistance[dist[i]] = 0.0
-	}
-	for i := 0; i < len(objectives[0]); i++ {
-		crowdingDistance[n.indexes[i][0]] = math.MaxFloat64
-	}
-	for i := 0; i < len(objectives[0]); i++ {
-		for j := 1; j < len(dist)-1; j++ {
-			if crowdingDistance[n.indexes[i][j]] != math.MaxFloat64 &&
-				objectives[n.indexes[i][len(dist)-1]][i] != objectives[n.indexes[i][0]][i] {
-				crowdingDistance[n.indexes[i][j]] +=
-					(objectives[n.indexes[i][j+1]][i] - objectives[n.indexes[i][j-1]][i]) /
-						(objectives[n.indexes[i][len(dist)-1]][i] - objectives[n.indexes[i][0]][i])
-			}
-		}
-	}
-	for i := 0; i < len(dist); i++ {
-		if crowdingDistance[dist[i]] != math.MaxFloat64 {
-			crowdingDistance[dist[i]] /= float64(len(objectives[0]))
-		}
-	}
-}
-
-func (n *NsgaIIISelection) crowdingFill(newPopulation moea.Population, newObjectives [][]float64, elite []int, start int) {
-	n.assignCrowdingDistance(n.mixedObjectives, elite, n.mixedCrowdingDistance)
-	for i, index := range elite {
-		n.indexes[0][i] = index
-	}
-	sort.Stable(byDistance{n.indexes[0][0:len(elite)], n.mixedCrowdingDistance})
-	for i, j := start, len(elite)-1; i < newPopulation.Len(); i, j = i+1, j-1 {
-		individual := n.mixedPopulation.Individual(n.indexes[0][j])
-		newPopulation.Individual(i).Copy(individual, 0, individual.Len())
-		newObjectives[i] = n.mixedObjectives[n.indexes[0][j]]
-		n.crowdingDistance[i] = n.mixedCrowdingDistance[n.indexes[0][j]]
 	}
 }
 
@@ -467,10 +397,6 @@ func (n *NsgaIIISelection) associate(normalizedIndividuals []NormalizedIndividua
 			association.dist = perpendicularDistance(individual.objectives, n.referencePointArray[i].position)
 			rpDist[i] = association
 		}
-		/*fmt.Printf("-------------\n")
-		for i := 0; i < len(rpDist); i++ {
-			fmt.Printf("^^^^%f\n", rpDist[i].dist)
-		}*/
 		sort.SliceStable(rpDist, func(i, j int) bool {
 			return rpDist[i].dist < rpDist[j].dist
 		})
@@ -487,9 +413,7 @@ func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, n
 	pool := n.pool[:0]
 	for i := 0; i < n.mixedPopulation.Len(); i++ {
 		pool = append(pool, i)
-		//fmt.Printf("%d, ", pool[i])
 	}
-	//fmt.Printf("\n")
 	remaining := newPopulation.Len()
 	rank := 1
 	for i := 0; i < newPopulation.Len(); {
@@ -498,10 +422,8 @@ func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, n
 		pool = pool[1:]
 		for j := 0; j < len(pool); j++ {
 			var flag int
-			//fmt.Printf("----> %d\n", elite)
 			for k := 0; k < len(elite); k++ {
 				flag = n.checkDominance(n.mixedObjectives, pool[j], elite[k])
-				//fmt.Printf("----> %d\n", flag)
 				if flag == 1 {
 					pool = append(pool, elite[k])
 					elite = append(elite[:k], elite[k+1:]...)
@@ -512,14 +434,11 @@ func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, n
 			}
 			if flag == 0 || flag == 1 {
 				elite = append(elite, pool[j])
-				//fmt.Printf("----> %d\n", elite)
 				pool = append(pool[:j], pool[j+1:]...)
-				//fmt.Printf("----> %d\n", pool)
 				j--
 			}
 		}
 		if i+len(elite) <= newPopulation.Len() {
-			j := i
 			for _, index := range elite {
 				individual := n.mixedPopulation.Individual(index)
 				newPopulation.Individual(i).Copy(individual, 0, individual.Len())
@@ -528,31 +447,84 @@ func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, n
 				i++
 			}
 			remaining -= len(elite)
-			n.assignCrowdingDistance(newObjectives, n.sequence[j:j+len(elite)], n.crowdingDistance)
 			rank++
 		} else {
-			//n.crowdingFill(newPopulation, newObjectives, elite, i)
 			var nroObjectives = len(n.mixedObjectives[0])
 			var idealPoint = n.findIdealPoint(elite, nroObjectives)
 			var extremes = n.findExtremePoints(elite, nroObjectives)
 			var intercepts = n.constructHyperplane(elite, extremes, nroObjectives)
 			var normalizedIndividuals = n.normalizeObjectives(elite, intercepts, idealPoint, nroObjectives)
 			n.associate(normalizedIndividuals, nroObjectives)
+			var res = make([]NormalizedIndividual, 0)
+			for len(res) < remaining {
+				var minAssocRps = getMinimalAssociationCountReferences(n.referencePointArray)
+				if len(minAssocRps) > 0 {
+					var chosenRPIndex = rand.Intn(len(minAssocRps))
+					var chosenRP = n.referencePointArray[minAssocRps[chosenRPIndex]]
+					if len(chosenRP.associations) != 0 {
+						var selected NormalizedIndividual
+						var selectedIndex int
+						if chosenRP.associationCount != 0 {
+							selectedIndex = getMinimalRefPointDistIndividual(chosenRP.associations)
+						} else {
+							selectedIndex = rand.Intn(len(chosenRP.associations))
+						}
+						selected = chosenRP.associations[selectedIndex]
+						res = append(res, selected)
+						chosenRP.associationCount++
+						chosenRP.associations = append(chosenRP.associations[:selectedIndex], chosenRP.associations[selectedIndex+1:]...)
+					} else {
+						n.referencePointArray = append(n.referencePointArray[:minAssocRps[chosenRPIndex]], n.referencePointArray[minAssocRps[chosenRPIndex]+1:]...)
+					}
+				}
+			}
+			for _, normalizedIndividual := range res {
+				individual := n.mixedPopulation.Individual(normalizedIndividual.index)
+				newPopulation.Individual(i).Copy(individual, 0, individual.Len())
+				newObjectives[i] = n.mixedObjectives[normalizedIndividual.index]
+				n.Rank[i] = rank
+				i++
+			}
+			for ; i < newPopulation.Len(); i++ {
+				n.Rank[i] = rank
+			}
 			for i := 0; i < len(n.referencePointArray); i++ {
 				n.referencePointArray[i].associationCount = 0;
 				n.referencePointArray[i].associations = nil
-			}
-			/*for i := 0; i < len(normalizedIndividuals); i++ {
-				fmt.Printf("%d ---> %f\n", normalizedIndividuals[i].index, normalizedIndividuals[i].distance)
-			}*/
-			for ; i < newPopulation.Len(); i++ {
-				n.Rank[i] = rank
 			}
 		}
 	}
 }
 
-func (n *NsgaIIISelection) assignRankAndCrowdingDistance(objectives [][]float64) {
+func getMinimalRefPointDistIndividual(individuals []NormalizedIndividual) int{
+	var minDist = math.Inf(1)
+	var index int
+	for i := 0; i < len(individuals); i++{
+		if(individuals[i].distance < minDist) {
+			index = i
+			minDist = individuals[i].distance
+		}
+	}
+	return index
+}
+
+func getMinimalAssociationCountReferences(referencePoints []ReferencePoint) []int {
+	var minCount = math.Inf(1)
+	var res = make([]int, 0)
+	for i := 0; i < len(referencePoints); i++ {
+		if float64(referencePoints[i].associationCount) < minCount {
+			minCount = float64(referencePoints[i].associationCount)
+		}
+	}
+	for i := 0; i < len(referencePoints); i++ {
+		if referencePoints[i].associationCount == int(minCount) {
+			res = append(res, i)
+		}
+	}
+	return res
+}
+
+func (n *NsgaIIISelection) assignRank(objectives [][]float64) {
 	orig := n.pool[:0]
 	for i := 0; i < len(objectives); i++ {
 		orig = append(orig, i)
@@ -588,7 +560,6 @@ func (n *NsgaIIISelection) assignRankAndCrowdingDistance(objectives [][]float64)
 		for i := 0; i < len(cur); i++ {
 			n.Rank[cur[i]] = rank
 		}
-		n.assignCrowdingDistance(objectives, cur, n.crowdingDistance)
 		rank++
 	}
 }
