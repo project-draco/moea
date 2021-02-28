@@ -1,13 +1,14 @@
-package nsgaii
+package dominationSelection
 
 import (
 	"math"
 	"sort"
-	"../nsgaiii"
-	".."
+
+	"github.com/project-draco/moea"
 )
 
-type NsgaIISelection struct {
+type DominationSelection struct {
+	ReferencePointsDivision int
 	Rank                  []int
 	crowdingDistance      []float64
 	mixedCrowdingDistance []float64
@@ -20,7 +21,6 @@ type NsgaIISelection struct {
 	pool                  []int
 	elite                 []int
 	sequence              []int
-	NsgaiiiVariant	  	  *nsgaiii.NsgaIIISelection
 }
 
 // crowddist.c: assign_crowding_distance, assign_crowding_distance_list, assign_crowding_distance_indices
@@ -80,13 +80,10 @@ func (bd byDistance) Less(i, j int) bool {
 	return bd.distances[bd.indexes[i]] < bd.distances[bd.indexes[j]]
 }
 
-func (n *NsgaIISelection) Initialize(config *moea.Config) {
+func (n *DominationSelection) Initialize(config *moea.Config) {
 	n.Rank = make([]int, config.Population.Len())
 	n.crowdingDistance = make([]float64, config.Population.Len())
 	n.mixedCrowdingDistance = make([]float64, config.Population.Len()*2)
-	if n.NsgaiiiVariant != nil {
-		n.NsgaiiiVariant.Initialize(config.NumberOfObjectives)
-	}
 	n.constraintsViolations = make([]float64, config.Population.Len()*2)
 	n.mixedPopulation = make(mixedPopulation, config.Population.Len()*2)
 	clone1 := config.Population.Clone()
@@ -109,7 +106,7 @@ func (n *NsgaIISelection) Initialize(config *moea.Config) {
 	}
 }
 
-func (n *NsgaIISelection) OnGeneration(config *moea.Config, population moea.Population, objectives [][]float64) {
+func (n *DominationSelection) OnGeneration(config *moea.Config, population moea.Population, objectives [][]float64) {
 	if n.previousPopulation == nil {
 		n.assignRankAndCrowdingDistance(objectives)
 	} else {
@@ -120,7 +117,7 @@ func (n *NsgaIISelection) OnGeneration(config *moea.Config, population moea.Popu
 	n.previousObjectives = objectives
 }
 
-func (n *NsgaIISelection) Finalize(config *moea.Config, population moea.Population, objectives [][]float64, result *moea.Result) {
+func (n *DominationSelection) Finalize(config *moea.Config, population moea.Population, objectives [][]float64, result *moea.Result) {
 	n.merge(population, objectives)
 	n.fillNondominatedSort(population, objectives)
 	for i := 0; i < population.Len(); i++ {
@@ -138,7 +135,7 @@ func (n *NsgaIISelection) Finalize(config *moea.Config, population moea.Populati
 	}
 }
 
-func (n *NsgaIISelection) Selection(config *moea.Config, objectives [][]float64) int {
+func (n *DominationSelection) Selection(config *moea.Config, objectives [][]float64) int {
 	r0 := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
 	r1 := int(config.RandomNumberGenerator.Float64() * float64(config.Population.Len()-1))
 	flag := n.checkDominance(objectives, r0, r1)
@@ -156,7 +153,7 @@ func (n *NsgaIISelection) Selection(config *moea.Config, objectives [][]float64)
 	return r1
 }
 
-func (n *NsgaIISelection) checkDominance(objectives [][]float64, a, b int) int {
+func (n *DominationSelection) checkDominance(objectives [][]float64, a, b int) int {
 	if n.constraintsViolations[a] < 0 && n.constraintsViolations[b] < 0 {
 		if n.constraintsViolations[a] > n.constraintsViolations[b] {
 			return 1
@@ -189,7 +186,7 @@ func (n *NsgaIISelection) checkDominance(objectives [][]float64, a, b int) int {
 	}
 }
 
-func (n *NsgaIISelection) assignCrowdingDistance(objectives [][]float64, dist []int, crowdingDistance []float64) {
+func (n *DominationSelection) assignCrowdingDistance(objectives [][]float64, dist []int, crowdingDistance []float64) {
 	if len(objectives) == 0 || len(dist) == 0 {
 		return
 	}
@@ -228,7 +225,8 @@ func (n *NsgaIISelection) assignCrowdingDistance(objectives [][]float64, dist []
 	}
 }
 
-func (n *NsgaIISelection) crowdingFill(newPopulation moea.Population, newObjectives [][]float64, elite []int, start int) {
+func (n *DominationSelection) crowdingFill(newPopulation moea.Population, newObjectives [][]float64, elite []int, start int) {
+	n.assignCrowdingDistance(n.mixedObjectives, elite, n.mixedCrowdingDistance)
 	for i, index := range elite {
 		n.indexes[0][i] = index
 	}
@@ -241,13 +239,13 @@ func (n *NsgaIISelection) crowdingFill(newPopulation moea.Population, newObjecti
 	}
 }
 
-func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, newObjectives [][]float64) {
+func (n *DominationSelection) fillNondominatedSort(newPopulation moea.Population, newObjectives [][]float64) {
 	pool := n.pool[:0]
 	for i := 0; i < n.mixedPopulation.Len(); i++ {
 		pool = append(pool, i)
 	}
 	rank := 1
-	remaining := newPopulation.Len()
+	remaining = newPopulation.Len()
 	for i := 0; i < newPopulation.Len(); {
 		elite := n.elite[0:1]
 		elite[0] = pool[0]
@@ -279,25 +277,11 @@ func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, ne
 				n.Rank[i] = rank
 				i++
 			}
-			if n.NsgaiiiVariant == nil {
-				n.assignCrowdingDistance(newObjectives, n.sequence[j:j+len(elite)], n.crowdingDistance)
-			}
+			n.assignCrowdingDistance(newObjectives, n.sequence[j:j+len(elite)], n.crowdingDistance)
 			rank++
 			remaining -= len(elite)
 		} else {
-			if n.NsgaiiiVariant == nil {
-				n.crowdingFill(newPopulation, newObjectives, elite, i)
-			} else {
-				var selectedIndividualsIndexes = n.NsgaiiiVariant.SelectRemaining(remaining, elite, n.mixedObjectives, n.mixedPopulation)
-				for _, selectedIndividualIndex := range selectedIndividualsIndexes {
-					individual := n.mixedPopulation.Individual(selectedIndividualIndex)
-					newPopulation.Individual(i).Copy(individual, 0, individual.Len())
-					newObjectives[i] = n.mixedObjectives[selectedIndividualIndex]
-					n.Rank[i] = rank
-					i++
-				}
-			}
-			n.assignCrowdingDistance(n.mixedObjectives, elite, n.mixedCrowdingDistance)
+			n.crowdingFill(newPopulation, newObjectives, elite, i)
 			for ; i < newPopulation.Len(); i++ {
 				n.Rank[i] = rank
 			}
@@ -305,7 +289,7 @@ func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, ne
 	}
 }
 
-func (n *NsgaIISelection) assignRankAndCrowdingDistance(objectives [][]float64) {
+func (n *DominationSelection) assignRankAndCrowdingDistance(objectives [][]float64) {
 	orig := n.pool[:0]
 	for i := 0; i < len(objectives); i++ {
 		orig = append(orig, i)
@@ -314,9 +298,7 @@ func (n *NsgaIISelection) assignRankAndCrowdingDistance(objectives [][]float64) 
 	for len(orig) > 0 {
 		if len(orig) == 1 {
 			n.Rank[orig[0]] = rank
-			if n.NsgaiiiVariant == nil {
-				n.crowdingDistance[orig[0]] = math.MaxFloat64
-			}
+			n.crowdingDistance[orig[0]] = math.MaxFloat64
 			break
 		}
 		cur := n.elite[:1]
@@ -348,7 +330,7 @@ func (n *NsgaIISelection) assignRankAndCrowdingDistance(objectives [][]float64) 
 	}
 }
 
-func (n *NsgaIISelection) merge(population moea.Population, objectives [][]float64) {
+func (n *DominationSelection) merge(population moea.Population, objectives [][]float64) {
 	for i := 0; i < n.previousPopulation.Len()*2; i++ {
 		var individual moea.Individual
 		if i < n.previousPopulation.Len() {

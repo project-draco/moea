@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"../../"
+	"../.."
 	"../../binary"
 	"../../nsgaii"
 )
@@ -168,7 +168,9 @@ func main() {
 	for i := 0; i < problem.numberOfValues; i++ {
 		lengths[i] = 32
 	}
-	nsgaiiSelection := &nsgaii.NsgaIISelection{}
+	nsgaiiSelection := &nsgaii.NsgaIISelection{
+		NsgaiiiVariant:		   nil,
+	}
 	config := &moea.Config{
 		Algorithm:             moea.NewSimpleAlgorithm(nsgaiiSelection, &moea.FastMutation{}),
 		Population:            binary.NewRandomBinaryPopulation(100, lengths, nil, rng),
