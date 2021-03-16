@@ -134,6 +134,7 @@ func (n *NsgaIISelection) Finalize(config *moea.Config, population moea.Populati
 		if result.BestObjective[0] > result.Individuals[i].Objective[0] {
 			result.BestObjective[0] = result.Individuals[i].Objective[0]
 			result.BestIndividual = population.Individual(i)
+			result.BestIndividualIndex = i
 		}
 	}
 }

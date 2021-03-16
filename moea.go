@@ -41,13 +41,14 @@ type ObjectiveFunc func(Individual) []float64
 type OnGenerationFunc func(int, *Result)
 
 type Result struct {
-	BestIndividual   Individual
-	BestObjective    []float64
-	WorstObjective   []float64
-	AverageObjective []float64
-	Mutations        int
-	Crossovers       int
-	Individuals      []IndividualResult
+	BestIndividual      Individual
+	BestIndividualIndex int
+	BestObjective       []float64
+	WorstObjective      []float64
+	AverageObjective    []float64
+	Mutations           int
+	Crossovers          int
+	Individuals         []IndividualResult
 }
 
 type IndividualResult struct {
@@ -78,6 +79,7 @@ func Run(config *Config) (*Result, error) {
 			if generationResult.BestObjective[j] < result.BestObjective[j] {
 				if j == 0 {
 					result.BestIndividual.Copy(generationResult.BestIndividual, 0, result.BestIndividual.Len())
+					result.BestIndividualIndex = generationResult.BestIndividualIndex
 				}
 				result.BestObjective[j] = generationResult.BestObjective[j]
 			}
@@ -127,4 +129,28 @@ func RunRepeatedly(configfunc func() *Config, repeat int) (*Result, error) {
 		}
 	}
 	return bestResult, nil
+}
+
+func (r *Result) ParettoFrontier() (front []IndividualResult) {
+	for i, ind1 := range r.Individuals {
+		dominatedBySomeOtherIndividual := false
+		for j, ind2 := range r.Individuals {
+			if i == j {
+				continue
+			}
+			dominatedByThisIndividual := true
+			for k := range ind1.Objective {
+				if ind1.Objective[k] < ind2.Objective[k] {
+					dominatedByThisIndividual = false
+				}
+			}
+			if dominatedByThisIndividual {
+				dominatedBySomeOtherIndividual = true
+			}
+		}
+		if !dominatedBySomeOtherIndividual {
+			front = append(front, ind1)
+		}
+	}
+	return front
 }
