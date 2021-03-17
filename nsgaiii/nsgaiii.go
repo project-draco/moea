@@ -1,36 +1,37 @@
 package nsgaiii
 
 import (
-	"math/rand"
 	"math"
+	"math/rand"
 	"sort"
-	"../"
+
+	"github.com/JoaoGabriel0511/moea"
 )
 
 type NsgaIIISelection struct {
 	ReferencePointsDivision int
-	referencePointArray   []ReferencePoint
-	mixedObjectives       [][]float64
-	mixedPopulation       mixedPopulation
+	referencePointArray     []ReferencePoint
+	mixedObjectives         [][]float64
+	mixedPopulation         mixedPopulation
 }
 
 type mixedPopulation []moea.Individual
 type ReferencePoint struct {
-	position []float64
+	position         []float64
 	associationCount int
-	associations []NormalizedIndividual
+	associations     []NormalizedIndividual
 }
 
 type NormalizedIndividual struct {
-	index int
-	objectives []float64
+	index          int
+	objectives     []float64
 	referencePoint ReferencePoint
-	distance float64
+	distance       float64
 }
 
-type Association struct{
+type Association struct {
 	point *ReferencePoint
-	dist float64
+	dist  float64
 }
 
 func generateReferencePoints(numberOfDivisions int, nroObjectives int) []ReferencePoint {
@@ -42,8 +43,8 @@ func generateReferencePoints(numberOfDivisions int, nroObjectives int) []Referen
 }
 
 func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, currentPoint ReferencePoint, numberOfObjectives int, left int, total int, element int) {
-	if(element == (numberOfObjectives - 1)) {
-		currentPoint.position[element] = float64(left)/float64(total)
+	if element == (numberOfObjectives - 1) {
+		currentPoint.position[element] = float64(left) / float64(total)
 		var referencePoint = currentPoint
 		referencePoint.position = make([]float64, len(currentPoint.position))
 		for i := 0; i < len(referencePoint.position); i++ {
@@ -54,12 +55,11 @@ func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, cur
 		*referencePointArray = append(*referencePointArray, referencePoint)
 	} else {
 		for i := 0; i <= left; i++ {
-			currentPoint.position[element] = float64(i)/float64(total)
-			generateReferencePointsRecursive(referencePointArray, currentPoint, numberOfObjectives, left - i, total, element + 1)
+			currentPoint.position[element] = float64(i) / float64(total)
+			generateReferencePointsRecursive(referencePointArray, currentPoint, numberOfObjectives, left-i, total, element+1)
 		}
 	}
 }
-
 
 func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, mixedObjectives [][]float64, mixedPopulation []moea.Individual) []int {
 	n.mixedObjectives = mixedObjectives
@@ -94,7 +94,7 @@ func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, mixedObje
 		}
 	}
 	for i := 0; i < len(n.referencePointArray); i++ {
-		n.referencePointArray[i].associationCount = 0;
+		n.referencePointArray[i].associationCount = 0
 		n.referencePointArray[i].associations = nil
 	}
 	return result
@@ -104,7 +104,7 @@ func (n *NsgaIIISelection) Initialize(numberOfObjectives int) {
 	n.referencePointArray = generateReferencePoints(n.ReferencePointsDivision, numberOfObjectives)
 }
 
-func  (n *NsgaIIISelection) normalizeObjectives(individualsIndexes []int, intercepts []float64, idealPoint[]float64, nroObjectives int) []NormalizedIndividual{
+func (n *NsgaIIISelection) normalizeObjectives(individualsIndexes []int, intercepts []float64, idealPoint []float64, nroObjectives int) []NormalizedIndividual {
 	var normalizedIndividuals = make([]NormalizedIndividual, 0)
 	for i := 0; i < len(individualsIndexes); i++ {
 		var normalizeObjectives = make([]float64, nroObjectives)
@@ -119,19 +119,19 @@ func  (n *NsgaIIISelection) normalizeObjectives(individualsIndexes []int, interc
 	return normalizedIndividuals
 }
 
-func normalizeObjective(individual []float64, objectiveIndex int, intercepts []float64,  idealPoint[]float64) float64 {
+func normalizeObjective(individual []float64, objectiveIndex int, intercepts []float64, idealPoint []float64) float64 {
 	var epsilon = 1e-20
-	if math.Abs(intercepts[objectiveIndex] - idealPoint[objectiveIndex]) > epsilon {
+	if math.Abs(intercepts[objectiveIndex]-idealPoint[objectiveIndex]) > epsilon {
 		return individual[objectiveIndex] / (intercepts[objectiveIndex] - idealPoint[objectiveIndex])
 	} else {
 		return individual[objectiveIndex] / epsilon
 	}
 }
 
-func minimunArray(a []float64, b []float64)[]float64 {
+func minimunArray(a []float64, b []float64) []float64 {
 	var aux = make([]float64, len(a))
 	for i := 0; i < len(aux); i++ {
-		if(a[i] < b[i]) {
+		if a[i] < b[i] {
 			aux[i] = a[i]
 		} else {
 			aux[i] = b[i]
@@ -140,7 +140,7 @@ func minimunArray(a []float64, b []float64)[]float64 {
 	return aux
 }
 
-func (n *NsgaIIISelection) findIdealPoint(elite []int, nroObjectives int) []float64{
+func (n *NsgaIIISelection) findIdealPoint(elite []int, nroObjectives int) []float64 {
 	var currentIdeal = make([]float64, nroObjectives)
 	for i := 0; i < len(currentIdeal); i++ {
 		currentIdeal[i] = math.Inf(1)
@@ -159,7 +159,7 @@ func (n *NsgaIIISelection) findExtremeIndividualForObjective(elite []int, object
 	var maxValue = math.Inf(-1)
 	var maxValueIndex = 0
 	for i := 0; i < len(elite); i++ {
-		if(n.mixedObjectives[elite[i]][objective] * -1 > maxValue) {
+		if n.mixedObjectives[elite[i]][objective]*-1 > maxValue {
 			maxValue = n.mixedObjectives[elite[i]][objective] * -1
 			maxValueIndex = elite[i]
 		}
@@ -176,9 +176,9 @@ func (n *NsgaIIISelection) findExtremePoints(elite []int, nroObjectives int) []i
 	return extremePoints
 }
 
-func (n *NsgaIIISelection) constructHyperplane(elite []int, extremes []int, nroObjectives int) []float64{
+func (n *NsgaIIISelection) constructHyperplane(elite []int, extremes []int, nroObjectives int) []float64 {
 	var intercepts = make([]float64, nroObjectives)
-	if(n.hasDuplicateIndividuals(elite)) {
+	if n.hasDuplicateIndividuals(elite) {
 		for i := 0; i < len(intercepts); i++ {
 			intercepts[i] = n.mixedObjectives[extremes[i]][i]
 		}
@@ -197,7 +197,7 @@ func (n *NsgaIIISelection) constructHyperplane(elite []int, extremes []int, nroO
 		}
 		var x = n.guassianElimination(a, b)
 		for i := 0; i < len(intercepts); i++ {
-			intercepts[i] = 1/x[i]
+			intercepts[i] = 1 / x[i]
 		}
 	}
 	return intercepts
@@ -210,18 +210,18 @@ func (n *NsgaIIISelection) guassianElimination(a [][]float64, b []float64) []flo
 		a[i] = append(a[i], b[i])
 	}
 	for base := 0; base < N-1; base++ {
-		for target := base+1; target < N; target++ {
-			var ratio = a[target][base]/a[base][base]
+		for target := base + 1; target < N; target++ {
+			var ratio = a[target][base] / a[base][base]
 			for term := 0; term < len(a[base]); term++ {
-				a[target][term] = a[target][term] - a[base][term]*ratio;
+				a[target][term] = a[target][term] - a[base][term]*ratio
 			}
 		}
 	}
 	for i := 0; i < len(x); i++ {
 		x[i] = 0
 	}
-	for i := N-1; i >=0 ; i--{
-		for known := i+1; known<N; known++ {
+	for i := N - 1; i >= 0; i-- {
+		for known := i + 1; known < N; known++ {
 			a[i][N] = a[i][N] - a[i][known]*x[known]
 		}
 		x[i] = a[i][N] / a[i][i]
@@ -229,11 +229,11 @@ func (n *NsgaIIISelection) guassianElimination(a [][]float64, b []float64) []flo
 	return x
 }
 
-func (n *NsgaIIISelection) hasDuplicateIndividuals(elite []int) bool{
+func (n *NsgaIIISelection) hasDuplicateIndividuals(elite []int) bool {
 	for i := 0; i < len(elite); i++ {
 		for j := 0; j < len(elite); j++ {
-			if(j != i) {
-				if(n.hasSameValuesForObjectives(n.mixedObjectives[elite[i]], n.mixedObjectives[elite[j]])) {
+			if j != i {
+				if n.hasSameValuesForObjectives(n.mixedObjectives[elite[i]], n.mixedObjectives[elite[j]]) {
 					return true
 				}
 			}
@@ -242,9 +242,9 @@ func (n *NsgaIIISelection) hasDuplicateIndividuals(elite []int) bool{
 	return false
 }
 
-func (n *NsgaIIISelection) hasSameValuesForObjectives(a []float64, b []float64) bool{
+func (n *NsgaIIISelection) hasSameValuesForObjectives(a []float64, b []float64) bool {
 	for i := 0; i < len(a); i++ {
-		if(a[i] == b[i]) {
+		if a[i] == b[i] {
 			return false
 		}
 	}
@@ -258,7 +258,7 @@ func perpendicularDistance(normalizedObjectives []float64, referencePoint []floa
 		numerator += referencePoint[i] * normalizedObjectives[i]
 		denominator += referencePoint[i] * referencePoint[i]
 	}
-	var k = numerator/denominator
+	var k = numerator / denominator
 	var d float64 = 0
 	for i := 0; i < len(referencePoint); i++ {
 		d += (k*referencePoint[i] - normalizedObjectives[i]) * (k*referencePoint[i] - normalizedObjectives[i])
@@ -287,11 +287,11 @@ func (n *NsgaIIISelection) associate(normalizedIndividuals []NormalizedIndividua
 	}
 }
 
-func getMinimalRefPointDistIndividual(individuals []NormalizedIndividual) int{
+func getMinimalRefPointDistIndividual(individuals []NormalizedIndividual) int {
 	var minDist = math.Inf(1)
 	var index int
-	for i := 0; i < len(individuals); i++{
-		if(individuals[i].distance < minDist) {
+	for i := 0; i < len(individuals); i++ {
+		if individuals[i].distance < minDist {
 			index = i
 			minDist = individuals[i].distance
 		}

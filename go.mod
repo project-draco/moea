@@ -1,4 +1,4 @@
-module github.com/project-draco/moea
+module github.com/JoaoGabriel0511/moea
 
 go 1.12
 

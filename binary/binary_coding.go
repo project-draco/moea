@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"unsafe"
 
-	"../"
+	"github.com/JoaoGabriel0511/moea"
 )
 
 type binaryPopulation struct {

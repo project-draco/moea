@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"../"
+	"github.com/JoaoGabriel0511/moea"
 )
 
 func TestNewFromString(t *testing.T) {

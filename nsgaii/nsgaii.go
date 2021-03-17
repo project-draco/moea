@@ -3,8 +3,9 @@ package nsgaii
 import (
 	"math"
 	"sort"
-	"../nsgaiii"
-	".."
+
+	"github.com/JoaoGabriel0511/moea"
+	"github.com/JoaoGabriel0511/moea/nsgaiii"
 )
 
 type NsgaIISelection struct {
@@ -20,7 +21,7 @@ type NsgaIISelection struct {
 	pool                  []int
 	elite                 []int
 	sequence              []int
-	NsgaiiiVariant	  	  *nsgaiii.NsgaIIISelection
+	NsgaiiiVariant        *nsgaiii.NsgaIIISelection
 }
 
 // crowddist.c: assign_crowding_distance, assign_crowding_distance_list, assign_crowding_distance_indices
