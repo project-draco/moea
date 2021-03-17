@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/project-draco/moea"
-	"github.com/project-draco/moea/binary"
-	"github.com/project-draco/moea/nsgaii"
+	"../.."
+	"../../binary"
+	"../../nsgaii"
 )
 
 const (
@@ -168,7 +168,9 @@ func main() {
 	for i := 0; i < problem.numberOfValues; i++ {
 		lengths[i] = 32
 	}
-	nsgaiiSelection := &nsgaii.NsgaIISelection{}
+	nsgaiiSelection := &nsgaii.NsgaIISelection{
+		NsgaiiiVariant:		   nil,
+	}
 	config := &moea.Config{
 		Algorithm:             moea.NewSimpleAlgorithm(nsgaiiSelection, &moea.FastMutation{}),
 		Population:            binary.NewRandomBinaryPopulation(100, lengths, nil, rng),
