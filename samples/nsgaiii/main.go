@@ -5,10 +5,11 @@ import (
 	"math"
 	"os"
 	"time"
-	"../.."
-	"../../binary"
-	"../../nsgaiii"
-	"../../nsgaii"
+
+	"github.com/JoaoGabriel0511/moea"
+	"github.com/JoaoGabriel0511/moea/binary"
+	"github.com/JoaoGabriel0511/moea/nsgaii"
+	"github.com/JoaoGabriel0511/moea/nsgaiii"
 )
 
 const (
@@ -54,7 +55,7 @@ func main() {
 		ReferencePointsDivision: 3,
 	}
 	nsgaiiSelection := &nsgaii.NsgaIISelection{
-		NsgaiiiVariant:		   nsgaiiiSelection,
+		NsgaiiiVariant: nsgaiiiSelection,
 	}
 	config := &moea.Config{
 		Algorithm:             moea.NewSimpleAlgorithm(nsgaiiSelection, &moea.FastMutation{}),
