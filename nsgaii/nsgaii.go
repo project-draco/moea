@@ -1,6 +1,7 @@
 package nsgaii
 
 import (
+	"fmt"
 	"math"
 	"sort"
 
@@ -286,6 +287,7 @@ func (n *NsgaIISelection) fillNondominatedSort(newPopulation moea.Population, ne
 }
 
 func (n *NsgaIISelection) AssignDistance(index int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int) {
+	fmt.Printf("bbbb\n")
 	n.AssignCrowdingDistance(newObjectives, n.sequence[index:index+len(elite)], n.crowdingDistance)
 }
 

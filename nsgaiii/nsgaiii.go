@@ -1,6 +1,7 @@
 package nsgaiii
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sort"
@@ -66,21 +67,22 @@ func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, cur
 	}
 }
 
-func (n *NsgaIIISelection) SelectFromRank(index int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int) {
+func (n *NsgaIIISelection) AssignDistance(index int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int) {
+	fmt.Printf("aaaa\n")
 }
 
-func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int, index int) {
+func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int, index *int) {
 	var selectedIndividualsIndexes = n.SelectIndividuals(remaining, elite)
 	for _, selectedIndividualIndex := range selectedIndividualsIndexes {
 		individual := n.MixedPopulation.Individual(selectedIndividualIndex)
-		newPopulation.Individual(index).Copy(individual, 0, individual.Len())
-		newObjectives[index] = n.MixedObjectives[selectedIndividualIndex]
-		n.Rank[index] = rank
-		index++
+		newPopulation.Individual(*index).Copy(individual, 0, individual.Len())
+		newObjectives[*index] = n.MixedObjectives[selectedIndividualIndex]
+		n.Rank[*index] = rank
+		*index++
 	}
 	n.AssignCrowdingDistance(n.MixedObjectives, elite, n.MixedCrowdingDistance)
-	for ; index < newPopulation.Len(); index++ {
-		n.Rank[index] = rank
+	for ; *index < newPopulation.Len(); *index++ {
+		n.Rank[*index] = rank
 	}
 }
 
