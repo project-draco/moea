@@ -6,13 +6,13 @@ import (
 	"sort"
 
 	"github.com/JoaoGabriel0511/moea"
+	"github.com/JoaoGabriel0511/moea/nsgaii"
 )
 
 type NsgaIIISelection struct {
 	ReferencePointsDivision int
 	referencePointArray     []ReferencePoint
-	mixedObjectives         [][]float64
-	mixedPopulation         mixedPopulation
+	nsgaii.NsgaIISelection
 }
 
 type mixedPopulation []moea.Individual
@@ -32,6 +32,11 @@ type NormalizedIndividual struct {
 type Association struct {
 	point *ReferencePoint
 	dist  float64
+}
+
+func (n *NsgaIIISelection) Initialize(config *moea.Config) {
+	n.NsgaIISelection.Initialize(config)
+	n.referencePointArray = generateReferencePoints(n.ReferencePointsDivision, config.NumberOfObjectives)
 }
 
 func generateReferencePoints(numberOfDivisions int, nroObjectives int) []ReferencePoint {
@@ -61,10 +66,26 @@ func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, cur
 	}
 }
 
-func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, mixedObjectives [][]float64, mixedPopulation []moea.Individual) []int {
-	n.mixedObjectives = mixedObjectives
-	n.mixedPopulation = mixedPopulation
-	var nroObjectives = len(n.mixedObjectives[0])
+func (n *NsgaIIISelection) SelectFromRank(index int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int) {
+}
+
+func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int, index int) {
+	var selectedIndividualsIndexes = n.SelectIndividuals(remaining, elite)
+	for _, selectedIndividualIndex := range selectedIndividualsIndexes {
+		individual := n.MixedPopulation.Individual(selectedIndividualIndex)
+		newPopulation.Individual(index).Copy(individual, 0, individual.Len())
+		newObjectives[index] = n.MixedObjectives[selectedIndividualIndex]
+		n.Rank[index] = rank
+		index++
+	}
+	n.AssignCrowdingDistance(n.MixedObjectives, elite, n.MixedCrowdingDistance)
+	for ; index < newPopulation.Len(); index++ {
+		n.Rank[index] = rank
+	}
+}
+
+func (n *NsgaIIISelection) SelectIndividuals(remaining int, elite []int) []int {
+	var nroObjectives = len(n.NsgaIISelection.MixedObjectives[0])
 	var idealPoint = n.findIdealPoint(elite, nroObjectives)
 	var extremes = n.findExtremePoints(elite, nroObjectives)
 	var intercepts = n.constructHyperplane(elite, extremes, nroObjectives)
@@ -100,16 +121,12 @@ func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, mixedObje
 	return result
 }
 
-func (n *NsgaIIISelection) Initialize(numberOfObjectives int) {
-	n.referencePointArray = generateReferencePoints(n.ReferencePointsDivision, numberOfObjectives)
-}
-
 func (n *NsgaIIISelection) normalizeObjectives(individualsIndexes []int, intercepts []float64, idealPoint []float64, nroObjectives int) []NormalizedIndividual {
 	var normalizedIndividuals = make([]NormalizedIndividual, 0)
 	for i := 0; i < len(individualsIndexes); i++ {
 		var normalizeObjectives = make([]float64, nroObjectives)
 		for j := 0; j < nroObjectives; j++ {
-			normalizeObjectives[j] = normalizeObjective(n.mixedObjectives[individualsIndexes[i]], j, intercepts, idealPoint)
+			normalizeObjectives[j] = normalizeObjective(n.NsgaIISelection.MixedObjectives[individualsIndexes[i]], j, intercepts, idealPoint)
 		}
 		var normalizedIndividual NormalizedIndividual
 		normalizedIndividual.objectives = normalizeObjectives
@@ -148,7 +165,7 @@ func (n *NsgaIIISelection) findIdealPoint(elite []int, nroObjectives int) []floa
 	for _, index := range elite {
 		var aux = make([]float64, nroObjectives)
 		for i := 0; i < len(aux); i++ {
-			aux[i] = n.mixedObjectives[index][i] * -1
+			aux[i] = n.NsgaIISelection.MixedObjectives[index][i] * -1
 		}
 		currentIdeal = minimunArray(currentIdeal, aux)
 	}
@@ -159,8 +176,8 @@ func (n *NsgaIIISelection) findExtremeIndividualForObjective(elite []int, object
 	var maxValue = math.Inf(-1)
 	var maxValueIndex = 0
 	for i := 0; i < len(elite); i++ {
-		if n.mixedObjectives[elite[i]][objective]*-1 > maxValue {
-			maxValue = n.mixedObjectives[elite[i]][objective] * -1
+		if n.NsgaIISelection.MixedObjectives[elite[i]][objective]*-1 > maxValue {
+			maxValue = n.NsgaIISelection.MixedObjectives[elite[i]][objective] * -1
 			maxValueIndex = elite[i]
 		}
 	}
@@ -180,7 +197,7 @@ func (n *NsgaIIISelection) constructHyperplane(elite []int, extremes []int, nroO
 	var intercepts = make([]float64, nroObjectives)
 	if n.hasDuplicateIndividuals(elite) {
 		for i := 0; i < len(intercepts); i++ {
-			intercepts[i] = n.mixedObjectives[extremes[i]][i]
+			intercepts[i] = n.NsgaIISelection.MixedObjectives[extremes[i]][i]
 		}
 	} else {
 		var b = make([]float64, nroObjectives)
@@ -191,7 +208,7 @@ func (n *NsgaIIISelection) constructHyperplane(elite []int, extremes []int, nroO
 		for i := 0; i < len(a); i++ {
 			var aux = make([]float64, nroObjectives)
 			for j := 0; j < nroObjectives; j++ {
-				aux[j] = n.mixedObjectives[extremes[i]][j]
+				aux[j] = n.NsgaIISelection.MixedObjectives[extremes[i]][j]
 			}
 			a[i] = aux
 		}
@@ -233,7 +250,7 @@ func (n *NsgaIIISelection) hasDuplicateIndividuals(elite []int) bool {
 	for i := 0; i < len(elite); i++ {
 		for j := 0; j < len(elite); j++ {
 			if j != i {
-				if n.hasSameValuesForObjectives(n.mixedObjectives[elite[i]], n.mixedObjectives[elite[j]]) {
+				if n.hasSameValuesForObjectives(n.NsgaIISelection.MixedObjectives[elite[i]], n.NsgaIISelection.MixedObjectives[elite[j]]) {
 					return true
 				}
 			}

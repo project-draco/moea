@@ -8,7 +8,6 @@ import (
 
 	"github.com/JoaoGabriel0511/moea"
 	"github.com/JoaoGabriel0511/moea/binary"
-	"github.com/JoaoGabriel0511/moea/nsgaii"
 	"github.com/JoaoGabriel0511/moea/nsgaiii"
 )
 
@@ -54,11 +53,8 @@ func main() {
 	nsgaiiiSelection := &nsgaiii.NsgaIIISelection{
 		ReferencePointsDivision: 3,
 	}
-	nsgaiiSelection := &nsgaii.NsgaIISelection{
-		NsgaiiiVariant: nsgaiiiSelection,
-	}
 	config := &moea.Config{
-		Algorithm:             moea.NewSimpleAlgorithm(nsgaiiSelection, &moea.FastMutation{}),
+		Algorithm:             moea.NewSimpleAlgorithm(nsgaiiiSelection, &moea.FastMutation{}),
 		Population:            binary.NewRandomBinaryPopulation(100, lengths, nil, rng),
 		NumberOfValues:        problem.numberOfValues,
 		NumberOfObjectives:    2,
@@ -83,6 +79,6 @@ func main() {
 			from, to := problem.bounds(j)
 			fmt.Printf(" %.2f", valueAsFloat(individual.Values[j], from, to))
 		}
-		fmt.Printf(" %v\n", nsgaiiSelection.Rank[i])
+		fmt.Printf(" %v\n", nsgaiiiSelection.Rank[i])
 	}
 }
