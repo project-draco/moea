@@ -1,7 +1,6 @@
 package nsgaiii
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"sort"
@@ -40,6 +39,17 @@ func (n *NsgaIIISelection) Initialize(config *moea.Config) {
 	n.referencePointArray = generateReferencePoints(n.ReferencePointsDivision, config.NumberOfObjectives)
 }
 
+func (n *NsgaIIISelection) OnGeneration(config *moea.Config, population moea.Population, objectives [][]float64) {
+	if n.PreviousPopulation == nil {
+		n.AssignRankAndCrowdingDistance(objectives)
+	} else {
+		n.Merge(population, objectives)
+		n.fillNondominatedSort(population, objectives)
+	}
+	n.PreviousPopulation = population
+	n.PreviousObjectives = objectives
+}
+
 func generateReferencePoints(numberOfDivisions int, nroObjectives int) []ReferencePoint {
 	var referencePointArray []ReferencePoint
 	var referencePoint ReferencePoint
@@ -67,8 +77,34 @@ func generateReferencePointsRecursive(referencePointArray *[]ReferencePoint, cur
 	}
 }
 
-func (n *NsgaIIISelection) AssignDistance(index int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int) {
-	fmt.Printf("aaaa\n")
+func (n *NsgaIIISelection) fillNondominatedSort(newPopulation moea.Population, newObjectives [][]float64) {
+	pool := n.Pool[:0]
+	for i := 0; i < n.MixedPopulation.Len(); i++ {
+		pool = append(pool, i)
+	}
+	rank := 1
+	remaining := newPopulation.Len()
+	for i := 0; i < newPopulation.Len(); {
+		elite := n.Elite[0:1]
+		n.RankDominance(&pool, &elite)
+		if i+len(elite) <= newPopulation.Len() {
+			n.SelectBestRank(&elite, &rank, &newPopulation, &newObjectives, &remaining, &i)
+		} else {
+			n.SelectRemaining(remaining, elite, newPopulation, newObjectives, rank, &i)
+		}
+	}
+}
+
+func (n *NsgaIIISelection) SelectBestRank(elite *[]int, rank *int, newPopulation *moea.Population, newObjectives *[][]float64, remaining *int, i *int) {
+	for _, index := range *elite {
+		individual := n.MixedPopulation.Individual(index)
+		(*newPopulation).Individual(*i).Copy(individual, 0, individual.Len())
+		(*newObjectives)[*i] = n.MixedObjectives[index]
+		n.Rank[*i] = *rank
+		*i++
+	}
+	*rank++
+	*remaining -= len(*elite)
 }
 
 func (n *NsgaIIISelection) SelectRemaining(remaining int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int, index *int) {

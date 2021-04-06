@@ -35,7 +35,7 @@ func TestAssignCrowdingDistance(t *testing.T) {
 		{[][]float64{{0.0, 0.0}, {1.0, 2.0}, {2.0, 1.0}, {3.0, 4.0}},
 			[]float64{(2.0/3.0 + 3.0/4.0) / 2.0, (2.0/3.0 + 2.0/4.0) / 2.0}},
 	} {
-		n.assignCrowdingDistance(f.in, []int{0, 1, 2, 3}, n.crowdingDistance)
+		n.AssignCrowdingDistance(f.in, []int{0, 1, 2, 3}, n.crowdingDistance)
 		for i := 1; i < 3; i++ {
 			if int(n.crowdingDistance[i]*1000000) != int(f.out[i-1]*1000000) {
 				t.Error("Expected ", f.out[i-1], " but was ", n.crowdingDistance[i])
@@ -55,6 +55,18 @@ func TestCheckDominance(t *testing.T) {
 		{[][]float64{{0.0, 0.0}, {0.0, 1.0}}, 1},
 		{[][]float64{{1.0, 0.0}, {0.0, 0.0}}, -1},
 		{[][]float64{{1.0, 0.0}, {0.0, 1.0}}, 0},
+		"fmt"
+		"math"
+		"sort"
+	
+		"github.com/JoaoGabriel0511/moea"
+	)
+	
+	type NsgaIISelection struct {
+		Rank                  []int
+		crowdingDistance      []float64
+		MixedCrowdingDistance []float64
+		constra
 	} {
 		d := n.checkDominance(f.in, 0, 1)
 		if d != f.out {
@@ -84,7 +96,7 @@ func TestCrowdingFill(t *testing.T) {
 }
 
 func TestFillNondominatedSort(t *testing.T) {
-	n.previousPopulation = integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
+	n.PreviousPopulation = integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
 	n.merge(integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng), nil)
 	newPopulation := integer.NewRandomIntegerPopulation(4, 1, []integer.Bound{{0, 10}}, rng)
 	newObjectives := [][]float64{{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}
@@ -136,7 +148,7 @@ func TestAssignRankAndCrowdingDistance(t *testing.T) {
 		{[][]float64{{0.0}, {0.0}, {0.0}, {0.0}}, []int{1, 1, 1, 1},
 			[]float64{math.MaxFloat64, 0, 0, 0}},
 	} {
-		n.assignRankAndCrowdingDistance(f.in)
+		n.AssignRankAndCrowdingDistance(f.in)
 		for i, r := range f.rank {
 			if n.Rank[i] != r {
 				t.Error("Expected rank", r, "but was", n.Rank[i], "testcase", testcase)
