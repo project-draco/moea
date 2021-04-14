@@ -1,7 +1,6 @@
 package nsgaii
 
 import (
-	"fmt"
 	"math"
 	"sort"
 
@@ -280,7 +279,6 @@ func (n *NsgaIISelection) RankDominance(pool *[]int, elite *[]int) {
 }
 
 func (n *NsgaIISelection) SelectBestRank(elite *[]int, rank *int, newPopulation *moea.Population, newObjectives *[][]float64, remaining *int, i *int) {
-	fmt.Printf("cccc\n")
 	j := *i
 	for _, index := range *elite {
 		individual := n.MixedPopulation.Individual(index)
@@ -295,7 +293,6 @@ func (n *NsgaIISelection) SelectBestRank(elite *[]int, rank *int, newPopulation 
 }
 
 func (n *NsgaIISelection) SelectRemaining(remaining int, elite []int, newPopulation moea.Population, newObjectives [][]float64, rank int, index *int) {
-	fmt.Printf("dddd\n")
 	n.crowdingFill(newPopulation, newObjectives, elite, *index)
 	n.AssignCrowdingDistance(n.MixedObjectives, elite, n.MixedCrowdingDistance)
 	for ; *index < newPopulation.Len(); *index++ {
