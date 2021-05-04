@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/JoaoGabriel0511/moea"
-	"github.com/JoaoGabriel0511/moea/binary"
-	"github.com/JoaoGabriel0511/moea/nsgaii"
+	"github.com/project-draco/moea"
+	"github.com/project-draco/moea/binary"
+	"github.com/project-draco/moea/nsgaii"
 )
 
 const (

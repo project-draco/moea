@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"sort"
 
-	"github.com/JoaoGabriel0511/moea"
-	"github.com/JoaoGabriel0511/moea/nsgaii"
+	"github.com/project-draco/moea"
+	"github.com/project-draco/moea/nsgaii"
 )
 
 type NsgaIIISelection struct {
